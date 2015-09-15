@@ -49,7 +49,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 
 # source code
-set(SOURCE_FILES askd.c version.h)
+set(SOURCE_FILES askd.c version.h ini.h ini.c)
 
 # include directories
 include(FindMicroHttpd)

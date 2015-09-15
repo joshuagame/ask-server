@@ -12,5 +12,5 @@ rm -rf dist
 mkdir dist
 cp build/ask_server* dist
 cp -r certs dist
-cp ask.conf dist
+cp ask.ini dist
 #cp /usr/local/bin/cygmicrohttpd-10.dll dist
