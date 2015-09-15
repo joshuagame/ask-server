@@ -1,2 +1,3 @@
-#ASK - Authentication Sessions Keeper Server
+#ASK 1.0
+#Authentication Sessions Keeper Server
 Copyright (C) 2015, the CodeGazoline team
