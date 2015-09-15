@@ -1,1 +1,0 @@
-/home/joshuagame/Sviluppo/ClionProjects/ask-server/build/CMakeFiles/ask_server.dir

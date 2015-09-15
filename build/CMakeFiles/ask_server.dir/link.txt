@@ -1,1 +1,0 @@
-/usr/bin/cc      CMakeFiles/ask_server.dir/askd.c.o  -o ask_server -rdynamic /usr/local/lib/libmicrohttpd.so -lconfig -Wl,-rpath,/usr/local/lib 

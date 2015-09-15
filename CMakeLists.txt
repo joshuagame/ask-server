@@ -53,10 +53,8 @@ set(SOURCE_FILES askd.c version.h)
 
 # include directories
 include(FindMicroHttpd)
-include(FindLibConfig)
 INCLUDE_DIRECTORIES(${MICROHTTPD_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${LIBCONFIG_INCLUDE_DIR})
 
 # target and Libraries
 add_executable(ask_server ${SOURCE_FILES})
-TARGET_LINK_LIBRARIES(ask_server ${MICROHTTPD_LIBRARIES} ${LIBCONFIG_LIBRARIES})
+TARGET_LINK_LIBRARIES(ask_server ${MICROHTTPD_LIBRARIES})
