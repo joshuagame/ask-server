@@ -117,6 +117,7 @@ typedef struct Route {
     const char* mime;
     RouteHandler handler;
     const void* handlerCls;
+    bool checkSession;
 } Route;
 
 /** forwards -------------------------------------------------------------------------------------------------------- */
@@ -154,8 +155,11 @@ static int notFoundHandler(const void* cls, const char* mime, Session* session, 
 
 /* Ask Server Routes */
 static Route routes[] = {
-        {"/", "text/html", &homeHandler, HOME_PAGE},
-        {"/ask", "text/html", &homeHandler, API_HOME_PAGE},
+        {"/", "text/html", &homeHandler, HOME_PAGE, false},
+        {"/ask", "text/html", &homeHandler, API_HOME_PAGE, false},
+        {"/ask/authb", NULL, &authbHandler, API_HOME_PAGE, true},
+        {"/ask/authf", NULL, &authfHandler, API_HOME_PAGE, true},
+        {"/ask/login", NULL, &homeHandler, API_HOME_PAGE, false},
         {NULL, NULL, &notFoundHandler, NULL}
 };
 
