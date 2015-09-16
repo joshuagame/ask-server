@@ -48,7 +48,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <microhttpd.h>
-
+#include <bits/errno.h>
 
 
 #define REALM "\"ask\""
@@ -56,14 +56,18 @@
 #define TEST_PASSWORD "password"
 #define DEFAULT_PORT 5080
 #define DEFAULT_SSL_PORT 5443
+#define ASK_COOKIE_NAME "ASKSESSION"
 
-static char* appName;
+/*------------------------------------------------------------------------------------------------------------------- */
+/*------------------------------------------------------------------------------------------------------------------- */
+/*------------------------------------------------------------------------------------------------------------------- */
 
 /** configuration --------------------------------------------------------------------------------------------------- */
 
-struct askConfig {
+struct Config {
     int port;
     bool ssl;
+    const char* name;
 } globalConfig = {
         .port = DEFAULT_PORT,
         .ssl = false
@@ -81,25 +85,39 @@ unsigned int commandLineConfiguredParams = NONE;
 
 /** request and session --------------------------------------------------------------------------------------------- */
 
-struct formCredentials {
+struct FormCredentials {
     char username[64];
     char password[64];
 };
 
-typedef struct askSession {
-    struct askSession* next;
+typedef struct Session {
+    struct Session* next;
     char id[33];
     unsigned int rc;
     time_t start;
-    struct formCredentials fcred;
-} askSession;
+    struct FormCredentials fcred;
+} Session;
+
+/** sessions linked list. TODO: use an HashMap! */
+static Session* sessions;
 
 typedef struct {
-    askSession* session;
+    Session* session;
     struct MHD_PostProcessor* postProcessor;
     const char* postUrl;
-} askRequest;
+} Request;
 
+typedef struct MHD_Response Response;
+
+/** routes ---------------------------------------------------------------------------------------------------------- */
+typedef int (*RouteHandler)(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
+
+typedef struct Route {
+    const char* url;
+    const char* mime;
+    RouteHandler handler;
+    const void* handlerCls;
+} Route;
 
 /** forwards -------------------------------------------------------------------------------------------------------- */
 void usage();
@@ -107,10 +125,39 @@ static int loadConfigurationHandler(void* user, const char* section, const char*
 int loadConfiguration();
 void printConfiguration();
 void startServer();
+static Session* getSession(struct MHD_Connection* connection);
+static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
+                              const char* contentType, const char* transferEncoding, const char* data,
+                              uint64_t off, size_t size);
 static int requestHandler(void* cls, struct MHD_Connection* connection, const char* url, const char* method,
                           const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr);
 static void requestCompletedCallback(void* cls, struct MHD_Connection* connection,
                                      void** conCls, enum MHD_RequestTerminationCode toe);
+static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
+static int notFoundHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
+
+/*------------------------------------------------------------------------------------------------------------------- */
+/*------------------------------------------------------------------------------------------------------------------- */
+/*------------------------------------------------------------------------------------------------------------------- */
+
+/* some simple util html pages */
+#define HOME_PAGE "<html><head><title>ASK Server</title></head>"\
+                    "<body>This is the Authentication Sessions Keeper Server up and running instance.</body></html>"
+#define API_HOME_PAGE "<html><head><title>ASK Server</title></head>"\
+                    "<body>This is the Authentication Sessions Keeper Server API Home:<br>"\
+                    "<b>/ask/ab</b>: Basic authentication<br>"\
+                    "<b>/ask/af</b>: Form-based authentication<br></body></html>"
+#define ERROR_ILLEGAL_REQUEST_PAGE "<html><head><title>ASK Server</title></head>"\
+                    "<body>Illegal request.</body></html>"
+#define ERROR_NOT_FOUND_PAGE "<html><head><title>ASK Server</title></head>"\
+                    "<body>Not found.</body></html>"
+
+/* Ask Server Routes */
+static Route routes[] = {
+        {"/", "text/html", &homeHandler, HOME_PAGE},
+        {"/ask", "text/html", &homeHandler, API_HOME_PAGE},
+        {NULL, NULL, &notFoundHandler, NULL}
+};
 
 /**
  * Main
@@ -127,7 +174,7 @@ int main(int argc, char *const *argv) {
     };
     int longIndex = 0;
 
-    appName = argv[0];
+    globalConfig.name = argv[0];
 
     int opt = getopt_long( argc, argv, shortOptions, longOptions, &longIndex );
     while (opt != -1) {
@@ -158,7 +205,7 @@ int main(int argc, char *const *argv) {
         opt = getopt_long( argc, argv, shortOptions, longOptions, &longIndex );
     }
 
-    printf("\n>> ASK server (%s) initialization\n", appName);
+    printf("\n>> ASK server (%s) initialization\n", globalConfig.name);
     printf(">> Loading configuration from %s\n", configFileName);
 
     /* load configuration from file */
@@ -167,7 +214,6 @@ int main(int argc, char *const *argv) {
 
     /* start the server */
     startServer();
-    printf(">> ASK server up & running...\n\n");
 
     return 0;
 }
@@ -175,7 +221,7 @@ int main(int argc, char *const *argv) {
 
 void usage()
 {
-    printf("Usage: %s [OPTIONS]\n", appName);
+    printf("Usage: %s [OPTIONS]\n", globalConfig.name);
     printf("  -p, --port port           ASK server port number\n");
     printf("  -s, --ssl                 enable SSL\n");
     printf("  -C, --config-file         configuration file\n");
@@ -187,7 +233,7 @@ void usage()
 static int loadConfigurationHandler(void* user, const char* section, const char* name,
                    const char* value)
 {
-    struct askConfig* pconfig = (struct askConfig*)user;
+    struct Config* pconfig = (struct Config*)user;
 
 #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
     if (MATCH("server", "port")) {
@@ -219,7 +265,7 @@ int loadConfiguration()
 void printConfiguration()
 {
     printf("=====================================================================\n");
-    printf("%s configuration\n", appName);
+    printf("%s configuration\n", globalConfig.name);
     printf("---------------------------------------------------------------------\n");
     printf("  Version         :     %s\n", ASK_VERSION);
     printf("  Listening port  :     %d\n", globalConfig.port);
@@ -230,7 +276,7 @@ void printConfiguration()
 
 void startServer()
 {
-    struct MHD_Daemon* server;
+    struct MHD_Daemon* mhdd;
     struct timeval tv;
     struct timeval* tvp;
     fd_set readFdSet;
@@ -241,12 +287,12 @@ void startServer()
 
     /** TODO: set connection timeout in config INI */
     srandom((unsigned int)time(NULL));
-    server = MHD_start_daemon(MHD_USE_DEBUG, globalConfig.port, NULL, NULL, &requestHandler, NULL,
+    mhdd = MHD_start_daemon(MHD_USE_DEBUG, globalConfig.port, NULL, NULL, &requestHandler, NULL,
                               MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int)15,
                               MHD_OPTION_NOTIFY_COMPLETED, &requestCompletedCallback, NULL,
                               MHD_OPTION_END);
 
-    if (server == NULL) {
+    if (mhdd == NULL) {
         perror("Unable to start server: error initializing internal MHD server Daemon\n");
         exit(-1);
     }
@@ -259,13 +305,13 @@ void startServer()
         FD_ZERO(&writeFdSet);
         FD_ZERO(&exceptionFdSet);
 
-        if (MHD_get_fdset(server, &readFdSet, &writeFdSet, &exceptionFdSet, &maxFd) != MHD_YES) {
+        if (MHD_get_fdset(mhdd, &readFdSet, &writeFdSet, &exceptionFdSet, &maxFd) != MHD_YES) {
             perror("Unable to start server: fatal internal error occurred\n");
             exit(-1);
         }
 
         tvp = NULL;
-        if (MHD_get_timeout(server, &mhdTimeout) == MHD_YES) {
+        if (MHD_get_timeout(mhdd, &mhdTimeout) == MHD_YES) {
             tv.tv_sec = mhdTimeout / 1000;
             tv.tv_usec = (mhdTimeout - (tv.tv_sec * 1000)) * 1000;
             tvp = &tv;
@@ -274,23 +320,198 @@ void startServer()
         select(maxFd + 1, &readFdSet, &writeFdSet, &exceptionFdSet, tvp);
 
         /* finally, fire up the server and make it running! */
-        MHD_run(server);
+        MHD_run(mhdd);
     }
 
-    MHD_stop_daemon(server);
+    MHD_stop_daemon(mhdd);
+}
+
+static Session* getSession(struct MHD_Connection* connection)
+{
+    Session* session;
+    const char* cookie;
+
+    /* search for an existing session for this connection */
+    if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
+        session = sessions;
+        while (session != NULL) {
+            if (strcmp(cookie, session->id) == 0) break;
+            session = session->next;
+        }
+        if (session != NULL) {
+            session->rc++;
+            return session;
+        }
+    }
+
+    /* create a new session */
+    session = calloc(1, sizeof(Session));
+    if (session == NULL) {
+        perror("unable to alloc session structure for the request\n");
+        return NULL;
+    }
+
+    /* generate a random unique session id.
+     * Note: this is not so secure, so, change the way we do it!
+     */
+    snprintf(session->id, sizeof(session->id), "%X%X%X%X",
+             (unsigned int)random(), (unsigned int)random(),
+             (unsigned int)random(), (unsigned int)random());
+    session->rc++;
+    session->start = time(NULL);
+
+    /* put the new session at the head (lifo) of the sessions list */
+    session->next = sessions;
+    sessions = session;
+
+    return session;
+}
+
+static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
+                              const char* contentType, const char* transferEncoding, const char* data,
+                              uint64_t off, size_t size)
+{
+    return MHD_YES;
 }
 
 static int requestHandler(void* cls, struct MHD_Connection* connection, const char* url, const char* method,
                           const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr)
 {
-    return 0;
+    Response* response;
+    Request* request;
+    int result;
+
+    if ((request = *ptr) == NULL) {
+        if ((request = calloc(1, sizeof(Request))) == NULL) {
+            //fprintf(stderr, "unable to calloc request structure: %s\n", strerror(errno));
+            perror("unable to alloc request structure\n");
+            return MHD_NO;
+        }
+        *ptr = request;
+
+        if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
+            request->postProcessor = MHD_create_post_processor(connection, 1024, &postParamsIterator, request);
+            if (request->postProcessor == NULL) {
+                fprintf(stderr, "Failed to setup post processor for '%s'\n", url);
+                return MHD_NO;
+            }
+        }
+
+        return MHD_YES;
+    }
+
+    if (request->session == NULL) {
+        request->session = getSession(connection);
+        if (request->session == NULL) {
+            fprintf(stderr, "unable to set up session for '%s'\n", url);
+            return MHD_NO;
+        }
+    }
+
+    Session* session = request->session;
+    session->start = time(NULL);
+    if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
+        fprintf(stdout, "POST method\n");
+
+        /* eval request post data */
+        MHD_post_process(request->postProcessor, uploadData, *uploadDataSize);
+        fprintf(stdout, "POST data processed\n");
+
+
+        if (*uploadDataSize != 0) {
+            fprintf(stdout, "upload data size = 0\n");
+            *uploadDataSize = 0;
+            return MHD_YES;
+        }
+
+        /* Ok, here we have done with POST data, now we can serve the response */
+        fprintf(stdout, "serving response to client\n");
+        MHD_destroy_post_processor(request->postProcessor);
+        request->postProcessor = NULL;
+
+        /* here we perform an internal fake GET request to the POST url */
+        method = MHD_HTTP_METHOD_GET;
+        if (request->postUrl != NULL) {
+            url = request->postUrl;
+        }
+    }
+
+    if ((strcmp(method, MHD_HTTP_METHOD_GET) == 0) || (strcmp(method, MHD_HTTP_METHOD_HEAD) == 0)) {
+        /* find route by url. TODO: improve this using an HashMap instead of an array for routes */
+        unsigned int i = 0;
+        while ((routes[i].url != NULL) && (strcmp(routes[i].url, url) != 0)) {
+            i++;
+        }
+
+        result = routes[i].handler(routes[i].handlerCls, routes[i].mime, session, connection);
+        if (result != MHD_YES) {
+            fprintf(stderr, "Error handling route to '%s'\n", url);
+        }
+
+        return result;
+    }
+
+    response = MHD_create_response_from_buffer(strlen(ERROR_ILLEGAL_REQUEST_PAGE), (void*)ERROR_ILLEGAL_REQUEST_PAGE,
+                                               MHD_RESPMEM_PERSISTENT);
+    result = MHD_queue_response(connection, MHD_HTTP_METHOD_NOT_ACCEPTABLE, response);
+    MHD_destroy_response(response);
+
+    return result;
 }
 
 static void requestCompletedCallback(void* cls, struct MHD_Connection* connection,
                                      void** conCls, enum MHD_RequestTerminationCode toe)
 {
+    Request* request = *conCls;
+
+    if (request != NULL) {
+        return;
+    }
+
+    if (request->session != NULL) {
+        request->session->rc--;
+    }
+    if (request->postProcessor != NULL) {
+        MHD_destroy_post_processor(request->postProcessor);
+    }
+
+    free(request);
+}
+
+static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
+{
+    int result;
+    const char* htmlContent = cls;
+    char* responseContent;
+    Response* response;
+
+    if (asprintf(&responseContent, "%s", htmlContent) == -1) {
+        return MHD_NO;
+    }
+
+    /* prepare the response */
+    response = MHD_create_response_from_buffer(strlen(responseContent), (void*)responseContent, MHD_RESPMEM_MUST_FREE);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
+
+    /* enqueue response for send */
+    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    MHD_destroy_response(response);
+
+    return result;
+}
+
+static int notFoundHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
+{
+    Response* response = MHD_create_response_from_buffer(strlen(ERROR_NOT_FOUND_PAGE), (void*)ERROR_NOT_FOUND_PAGE,
+                                                         MHD_RESPMEM_PERSISTENT);
+    int result = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
+    MHD_destroy_response(response);
+
+    return result;
 
 }
+
 
 
 
