@@ -31,11 +31,11 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(ask_server C)
 
-set(VERSION_MAJOR "1")
-set(VERSION_MINOR "0")
-set(VERSION_PATCH "0")
-set(VERSION_PRERELEASE "alpha-1")
-set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}_${VERSION_PRERELEASE}")
+set(ASK_VERSION_MAJOR "1")
+set(ASK_VERSION_MINOR "0")
+set(ASK_VERSION_PATCH "0")
+set(ASK_VERSION_PRERELEASE "alpha-1")
+set(ASK_VERSION "${ASK_VERSION_MAJOR}.${ASK_VERSION_MINOR}.${ASK_VERSION_PATCH}_${ASK_VERSION_PRE}")
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/version.h)
 
@@ -49,7 +49,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 
 # source code
-set(SOURCE_FILES askd.c version.h ini.h ini.c)
+set(SOURCE_FILES askd.c config.c session.c protocol.c version.h ini.h ini.c ask.h)
 
 # include directories
 include(FindMicroHttpd)

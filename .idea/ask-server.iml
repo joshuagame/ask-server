@@ -3,10 +3,14 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ask.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/askd.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/FindMicroHttpd.cmake" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/config.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/ini.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/ini.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/protocol.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/session.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/version.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/version.h.in" isTestSource="false" />
     </content>
@@ -19,6 +23,7 @@
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include-fixed" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include/cilk" />
+          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include/objc" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include/sanitizer" />
           <root url="file:///usr/local/include" />
         </CLASSES>
@@ -27,6 +32,7 @@
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include-fixed" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include/cilk" />
+          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include/objc" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.9/include/sanitizer" />
           <root url="file:///usr/local/include" />
         </SOURCES>
