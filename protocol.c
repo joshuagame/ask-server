@@ -30,93 +30,10 @@
 ** ===========================================================================
 */
 
-#include "ask.h"
+#include "protocol.h"
 
-/** routes */
-typedef int (*RouteHandler)(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
-
-typedef struct Route {
-    const char* url;
-    const char* mime;
-    RouteHandler handler;
-    const void* handlerCls;
-    bool checkSession;
-} Route;
-
-static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
-                              const char* contentType, const char* transferEncoding, const char* data,
-                              uint64_t off, size_t size);
-static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
-static int basicAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
-static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
-static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
-static int notFoundHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
-static int basicAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
-static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
-
-/* Ask Server Routes */
-static Route routes[] = {
-        {"/", "text/html", &homeHandler, HOME_PAGE, false},
-        {"/ask", "text/html", &homeHandler, API_HOME_PAGE, false},
-        {"/ask/authb", NULL, &basicAuthHandler, API_HOME_PAGE, true},
-        {"/ask/authf", NULL, &formBasedAuthHandler, API_HOME_PAGE, true},
-        {"/ask/login", NULL, &homeHandler, API_HOME_PAGE, false},
-        {NULL, NULL, &notFoundHandler, NULL}
-};
-
-static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
-{
-    int result;
-    const char* htmlContent = cls;
-    char* responseContent;
-    Response* response;
-
-    if (asprintf(&responseContent, "%s", htmlContent) == -1) {
-        return MHD_NO;
-    }
-
-    /* prepare the response */
-    response = MHD_create_response_from_buffer(strlen(responseContent), (void*)responseContent, MHD_RESPMEM_MUST_FREE);
-    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
-
-    /* enqueue response for send */
-    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
-    MHD_destroy_response(response);
-
-    return result;
-}
-
-static int notFoundHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
-{
-    Response* response = MHD_create_response_from_buffer(strlen(ERROR_NOT_FOUND_PAGE), (void*)ERROR_NOT_FOUND_PAGE,
-                                                         MHD_RESPMEM_PERSISTENT);
-    int result = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response);
-    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
-    MHD_destroy_response(response);
-
-    return result;
-
-}
-
-static int basicAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
-{
-    return 0;
-}
-
-static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
-{
-    return 0;
-}
-
-static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
-                              const char* contentType, const char* transferEncoding, const char* data,
-                              uint64_t off, size_t size)
-{
-    return MHD_YES;
-}
-
-int requestHandler(void* cls, struct MHD_Connection* connection, const char* url, const char* method,
-                          const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr)
+int requestHandler(void* cls, Connection* connection, const char* url, const char* method,
+                   const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr)
 {
     Response* response;
     Request* request;
@@ -200,8 +117,8 @@ int requestHandler(void* cls, struct MHD_Connection* connection, const char* url
     return result;
 }
 
-void requestCompletedCallback(void* cls, struct MHD_Connection* connection,
-                                     void** conCls, enum MHD_RequestTerminationCode toe)
+void requestCompletedCallback(void* cls, Connection* connection,
+                              void** conCls, enum MHD_RequestTerminationCode toe)
 {
     Request* request = *conCls;
 
@@ -217,4 +134,55 @@ void requestCompletedCallback(void* cls, struct MHD_Connection* connection,
     }
 
     free(request);
+}
+
+static int homeHandler(const void* cls, const char* mime, Session* session, Connection* connection)
+{
+    int result;
+    const char* htmlContent = cls;
+    char* responseContent;
+    Response* response;
+
+    if (asprintf(&responseContent, "%s", htmlContent) == -1) {
+        return MHD_NO;
+    }
+
+    /* prepare the response */
+    response = MHD_create_response_from_buffer(strlen(responseContent), (void*)responseContent, MHD_RESPMEM_MUST_FREE);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
+
+    /* enqueue response for send */
+    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    MHD_destroy_response(response);
+
+    return result;
+}
+
+static int notFoundHandler(const void* cls, const char* mime, Session* session, Connection* connection)
+{
+    Response* response = MHD_create_response_from_buffer(strlen(ERROR_NOT_FOUND_PAGE), (void*)ERROR_NOT_FOUND_PAGE,
+                                                         MHD_RESPMEM_PERSISTENT);
+    int result = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
+    MHD_destroy_response(response);
+
+    return result;
+
+}
+
+static int basicAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection)
+{
+    return 0;
+}
+
+static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection)
+{
+    return 0;
+}
+
+static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
+                              const char* contentType, const char* transferEncoding, const char* data,
+                              uint64_t off, size_t size)
+{
+    return MHD_YES;
 }

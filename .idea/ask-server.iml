@@ -10,6 +10,7 @@
       <sourceFolder url="file://$MODULE_DIR$/ini.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/ini.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/protocol.c" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/protocol.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/session.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/version.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/version.h.in" isTestSource="false" />

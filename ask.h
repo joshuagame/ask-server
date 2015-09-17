@@ -117,6 +117,7 @@ typedef struct {
 } Request;
 
 typedef struct MHD_Response Response;
+typedef struct MHD_Connection Connection;
 
 
 /** forward (only public) function declarations */
