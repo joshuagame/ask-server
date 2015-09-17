@@ -47,9 +47,11 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <inttypes.h>
 #include <microhttpd.h>
+#ifndef __APPLE__
 #include <bits/errno.h>
-
+#endif
 
 #define REALM "\"ask\""
 #define TEST_USER "test"
@@ -58,11 +60,20 @@
 #define DEFAULT_SSL_PORT 5443
 #define ASK_COOKIE_NAME "ASKSESSION"
 
-/*------------------------------------------------------------------------------------------------------------------- */
-/*------------------------------------------------------------------------------------------------------------------- */
-/*------------------------------------------------------------------------------------------------------------------- */
+/* html pages */
+#define HOME_PAGE "<html><head><title>ASK Server</title></head>"\
+                    "<body>This is the Authentication Sessions Keeper Server up and running instance.</body></html>"
+#define API_HOME_PAGE "<html><head><title>ASK Server</title></head>"\
+                    "<body>This is the Authentication Sessions Keeper Server API Home:<br>"\
+                    "<b>/ask/ab</b>: Basic authentication<br>"\
+                    "<b>/ask/af</b>: Form-based authentication<br></body></html>"
+#define ERROR_ILLEGAL_REQUEST_PAGE "<html><head><title>ASK Server</title></head>"\
+                    "<body>Illegal request.</body></html>"
+#define ERROR_NOT_FOUND_PAGE "<html><head><title>ASK Server</title></head>"\
+                    "<body>Not found.</body></html>"
 
-/** configuration --------------------------------------------------------------------------------------------------- */
+
+/** configuration */
 
 struct Config {
     int port;
@@ -83,7 +94,7 @@ enum CL_CONF {
 
 unsigned int commandLineConfiguredParams = NONE;
 
-/** request and session --------------------------------------------------------------------------------------------- */
+/** request and session */
 
 struct FormCredentials {
     char username[64];
@@ -109,7 +120,7 @@ typedef struct {
 
 typedef struct MHD_Response Response;
 
-/** routes ---------------------------------------------------------------------------------------------------------- */
+/** routes */
 typedef int (*RouteHandler)(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
 
 typedef struct Route {
@@ -120,7 +131,7 @@ typedef struct Route {
     bool checkSession;
 } Route;
 
-/** forwards -------------------------------------------------------------------------------------------------------- */
+/** forward function declarations */
 void usage();
 static int loadConfigurationHandler(void* user, const char* section, const char* name, const char* value);
 int loadConfiguration();
@@ -135,33 +146,17 @@ static int requestHandler(void* cls, struct MHD_Connection* connection, const ch
 static void requestCompletedCallback(void* cls, struct MHD_Connection* connection,
                                      void** conCls, enum MHD_RequestTerminationCode toe);
 static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
+static int basicAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
+static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
+static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
 static int notFoundHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
+static int basicAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
+static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection);
 
-/*------------------------------------------------------------------------------------------------------------------- */
-/*------------------------------------------------------------------------------------------------------------------- */
-/*------------------------------------------------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------- */
 
-/* some simple util html pages */
-#define HOME_PAGE "<html><head><title>ASK Server</title></head>"\
-                    "<body>This is the Authentication Sessions Keeper Server up and running instance.</body></html>"
-#define API_HOME_PAGE "<html><head><title>ASK Server</title></head>"\
-                    "<body>This is the Authentication Sessions Keeper Server API Home:<br>"\
-                    "<b>/ask/ab</b>: Basic authentication<br>"\
-                    "<b>/ask/af</b>: Form-based authentication<br></body></html>"
-#define ERROR_ILLEGAL_REQUEST_PAGE "<html><head><title>ASK Server</title></head>"\
-                    "<body>Illegal request.</body></html>"
-#define ERROR_NOT_FOUND_PAGE "<html><head><title>ASK Server</title></head>"\
-                    "<body>Not found.</body></html>"
 
-/* Ask Server Routes */
-static Route routes[] = {
-        {"/", "text/html", &homeHandler, HOME_PAGE, false},
-        {"/ask", "text/html", &homeHandler, API_HOME_PAGE, false},
-        {"/ask/authb", NULL, &authbHandler, API_HOME_PAGE, true},
-        {"/ask/authf", NULL, &authfHandler, API_HOME_PAGE, true},
-        {"/ask/login", NULL, &homeHandler, API_HOME_PAGE, false},
-        {NULL, NULL, &notFoundHandler, NULL}
-};
 
 /**
  * Main
@@ -222,6 +217,9 @@ int main(int argc, char *const *argv) {
     return 0;
 }
 
+/* ------------------------------------------------------------------------------------------------------------- */
+/* CONFIGURATION MANAGEMENT                                                                                      */
+/* ------------------------------------------------------------------------------------------------------------- */
 
 void usage()
 {
@@ -330,46 +328,69 @@ void startServer()
     MHD_stop_daemon(mhdd);
 }
 
-static Session* getSession(struct MHD_Connection* connection)
+/* ------------------------------------------------------------------------------------------------------------- */
+/* ROUTES & HANLDERS                                                                                                */
+/* ------------------------------------------------------------------------------------------------------------- */
+
+
+/* Ask Server Routes */
+static Route routes[] = {
+        {"/", "text/html", &homeHandler, HOME_PAGE, false},
+        {"/ask", "text/html", &homeHandler, API_HOME_PAGE, false},
+        {"/ask/authb", NULL, &basicAuthHandler, API_HOME_PAGE, true},
+        {"/ask/authf", NULL, &formBasedAuthHandler, API_HOME_PAGE, true},
+        {"/ask/login", NULL, &homeHandler, API_HOME_PAGE, false},
+        {NULL, NULL, &notFoundHandler, NULL}
+};
+
+static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
 {
-    Session* session;
-    const char* cookie;
+    int result;
+    const char* htmlContent = cls;
+    char* responseContent;
+    Response* response;
 
-    /* search for an existing session for this connection */
-    if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
-        session = sessions;
-        while (session != NULL) {
-            if (strcmp(cookie, session->id) == 0) break;
-            session = session->next;
-        }
-        if (session != NULL) {
-            session->rc++;
-            return session;
-        }
+    if (asprintf(&responseContent, "%s", htmlContent) == -1) {
+        return MHD_NO;
     }
 
-    /* create a new session */
-    session = calloc(1, sizeof(Session));
-    if (session == NULL) {
-        perror("unable to alloc session structure for the request\n");
-        return NULL;
-    }
+    /* prepare the response */
+    response = MHD_create_response_from_buffer(strlen(responseContent), (void*)responseContent, MHD_RESPMEM_MUST_FREE);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
 
-    /* generate a random unique session id.
-     * Note: this is not so secure, so, change the way we do it!
-     */
-    snprintf(session->id, sizeof(session->id), "%X%X%X%X",
-             (unsigned int)random(), (unsigned int)random(),
-             (unsigned int)random(), (unsigned int)random());
-    session->rc++;
-    session->start = time(NULL);
+    /* enqueue response for send */
+    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    MHD_destroy_response(response);
 
-    /* put the new session at the head (lifo) of the sessions list */
-    session->next = sessions;
-    sessions = session;
-
-    return session;
+    return result;
 }
+
+static int notFoundHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
+{
+    Response* response = MHD_create_response_from_buffer(strlen(ERROR_NOT_FOUND_PAGE), (void*)ERROR_NOT_FOUND_PAGE,
+                                                         MHD_RESPMEM_PERSISTENT);
+    int result = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
+    MHD_destroy_response(response);
+
+    return result;
+
+}
+
+static int basicAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
+{
+    return 0;
+}
+
+static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
+{
+    return 0;
+}
+
+/* ------------------------------------------------------------------------------------------------------------- */
+/* PROTOCOL                                                                                                      */
+/* ------------------------------------------------------------------------------------------------------------- */
+
 
 static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
                               const char* contentType, const char* transferEncoding, const char* data,
@@ -482,41 +503,62 @@ static void requestCompletedCallback(void* cls, struct MHD_Connection* connectio
     free(request);
 }
 
-static int homeHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
-{
-    int result;
-    const char* htmlContent = cls;
-    char* responseContent;
-    Response* response;
+/* ------------------------------------------------------------------------------------------------------------- */
+/* SESSION MANAGEMENT                                                                                            */
+/* ------------------------------------------------------------------------------------------------------------- */
 
-    if (asprintf(&responseContent, "%s", htmlContent) == -1) {
-        return MHD_NO;
+static Session* getSession(struct MHD_Connection* connection)
+{
+    Session* session;
+    const char* cookie;
+
+    /* search for an existing session for this connection */
+    if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
+        session = sessions;
+        while (session != NULL) {
+            if (strcmp(cookie, session->id) == 0) break;
+            session = session->next;
+        }
+        if (session != NULL) {
+            session->rc++;
+            return session;
+        }
     }
 
-    /* prepare the response */
-    response = MHD_create_response_from_buffer(strlen(responseContent), (void*)responseContent, MHD_RESPMEM_MUST_FREE);
-    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
+    /* create a new session */
+    session = calloc(1, sizeof(Session));
+    if (session == NULL) {
+        perror("unable to alloc session structure for the request\n");
+        return NULL;
+    }
 
-    /* enqueue response for send */
-    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
-    MHD_destroy_response(response);
+    /* generate a random unique session id.
+     * Note: this is not so secure, so, change the way we do it!
+     */
+    unsigned int v1 = (unsigned int)random();
+    unsigned int v2 = (unsigned int)random();
+    unsigned int v3 = (unsigned int)random();
+    unsigned int v4 = (unsigned int)random();
+    snprintf(session->id, sizeof(session->id), "%X%X%X%X", v1, v2, v3, v4);
+    session->rc++;
+    session->start = time(NULL);
 
-    return result;
+    /* put the new session at the head (lifo) of the sessions list */
+    session->next = sessions;
+    sessions = session;
+
+    return session;
 }
 
-static int notFoundHandler(const void* cls, const char* mime, Session* session, struct MHD_Connection* connection)
+static void addSessionCookie(Session* session, Response* response)
 {
-    Response* response = MHD_create_response_from_buffer(strlen(ERROR_NOT_FOUND_PAGE), (void*)ERROR_NOT_FOUND_PAGE,
-                                                         MHD_RESPMEM_PERSISTENT);
-    int result = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response);
-    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
-    MHD_destroy_response(response);
-
-    return result;
-
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), "%s=%s", ASK_COOKIE_NAME, session->id);
+    if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
+        perror("Unable to set session cookie header.\n");
+    }
 }
 
-
-
-
-
+/* ------------------------------------------------------------------------------------------------------------- */
+/* AUTHENTICATION                                                                                                */
+/* ------------------------------------------------------------------------------------------------------------- */
