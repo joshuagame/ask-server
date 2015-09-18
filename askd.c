@@ -7,7 +7,8 @@
 **                 v0.1
 ** ===========================================================================
 **
-** Copyright (C) 2015, The CodeGazoline Team - gargantua@codegazoline.it
+** Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
+** Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
 **
 ** askd.c
 ** main entry point for the ASK Server
@@ -25,7 +26,7 @@
 ** GNU General Public License for more details.
 **
 ** You should have received a copy of the GNU General Public License
-** along with Nome - Programma.If not, see <http:**www.gnu.org/licenses/>.
+** along with Nome - Programma.If not, see <http://www.gnu.org/licenses/>.
 **
 ** ===========================================================================
 */

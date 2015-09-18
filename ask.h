@@ -7,7 +7,8 @@
 **                 v0.1
 ** ===========================================================================
 **
-** Copyright (C) 2015, The CodeGazoline Team - gargantua@codegazoline.it
+** Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
+** Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
 **
 ** ask.h
 ** main header file for the ASK Server
@@ -25,7 +26,7 @@
 ** GNU General Public License for more details.
 **
 ** You should have received a copy of the GNU General Public License
-** along with Nome - Programma.If not, see <http:**www.gnu.org/licenses/>.
+** along with Nome - Programma.If not, see <http://www.gnu.org/licenses/>.
 **
 ** ===========================================================================
 */
@@ -55,7 +56,7 @@
 #include <bits/errno.h>
 #endif
 
-#define REALM "\"ask\""
+#define ASK_REALM "\"ask\""
 #define TEST_USER "test"
 #define TEST_PASSWORD "password"
 
@@ -72,6 +73,9 @@
                     "<body>Illegal request.</body></html>"
 #define ERROR_NOT_FOUND_PAGE "<html><head><title>ASK Server</title></head>"\
                     "<body>Not found.</body></html>"
+
+#define AUTHENTICATED MHD_YES
+#define NOT_AUTHENTICATED MHD_NO
 
 
 /** configuration */
@@ -128,6 +132,7 @@ void configure(int argc, char *const *argv);
 /* session.c */
 Session* getSession(struct MHD_Connection* connection);
 void addSessionCookie(Session* session, Response* response);
+const char* getSessionCookie(Connection* connection);
 
 /* protocol.c */
 
@@ -135,5 +140,9 @@ int requestHandler(void* cls, struct MHD_Connection* connection, const char* url
                           const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr);
 void requestCompletedCallback(void* cls, struct MHD_Connection* connection,
                                      void** conCls, enum MHD_RequestTerminationCode toe);
+const char* getHeaderValue(Connection* connection, const char* headerName);
+
+/* authentication.c */
+int authenticate(Connection* connection);
 
 #endif //ASK_SERVER_ASK_H

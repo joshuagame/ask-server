@@ -7,7 +7,8 @@
 **                 v0.1
 ** ===========================================================================
 **
-** Copyright (C) 2015, The CodeGazoline Team - gargantua@codegazoline.it
+** Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
+** Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
 **
 ** protocol.c
 ** HTTP and routes management functionalities
@@ -25,7 +26,7 @@
 ** GNU General Public License for more details.
 **
 ** You should have received a copy of the GNU General Public License
-** along with Nome - Programma.If not, see <http:**www.gnu.org/licenses/>.
+** along with Nome - Programma.If not, see <http://www.gnu.org/licenses/>.
 **
 ** ===========================================================================
 */
@@ -38,6 +39,15 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
     Response* response;
     Request* request;
     int result;
+    const char* header;
+
+    if ((header = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE)) != NULL) {
+        printf("Requst Content-Type: %s\n", header);
+    }
+
+    if ((header = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, MHD_HTTP_HEADER_CONNECTION)) != NULL) {
+        printf("Requst Connection: %s\n", header);
+    }
 
     if ((request = *ptr) == NULL) {
         if ((request = calloc(1, sizeof(Request))) == NULL) {
@@ -111,6 +121,8 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
 
     response = MHD_create_response_from_buffer(strlen(ERROR_ILLEGAL_REQUEST_PAGE), (void*)ERROR_ILLEGAL_REQUEST_PAGE,
                                                MHD_RESPMEM_PERSISTENT);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_SERVER, "ASK Server 1.0");
+
     result = MHD_queue_response(connection, MHD_HTTP_METHOD_NOT_ACCEPTABLE, response);
     MHD_destroy_response(response);
 
@@ -136,6 +148,18 @@ void requestCompletedCallback(void* cls, Connection* connection,
     free(request);
 }
 
+const char* getHeaderValue(Connection* connection, const char* headerName)
+{
+    //MHD_HTTP_HEADER_AUTHORIZATION
+    return MHD_lookup_connection_value(connection, MHD_HEADER_KIND, headerName);
+
+}
+
+int addResponseHeader(Response* response, const char* headerName, const char* headerValue)
+{
+    return MHD_add_response_header(response, headerName,headerValue);
+}
+
 static int homeHandler(const void* cls, const char* mime, Session* session, Connection* connection)
 {
     int result;
@@ -150,6 +174,7 @@ static int homeHandler(const void* cls, const char* mime, Session* session, Conn
     /* prepare the response */
     response = MHD_create_response_from_buffer(strlen(responseContent), (void*)responseContent, MHD_RESPMEM_MUST_FREE);
     MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_SERVER, "ASK Server 1.0");
 
     /* enqueue response for send */
     result = MHD_queue_response(connection, MHD_HTTP_OK, response);
@@ -164,6 +189,7 @@ static int notFoundHandler(const void* cls, const char* mime, Session* session, 
                                                          MHD_RESPMEM_PERSISTENT);
     int result = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response);
     MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_ENCODING, mime);
+    MHD_add_response_header(response, MHD_HTTP_HEADER_SERVER, "ASK Server 1.0");
     MHD_destroy_response(response);
 
     return result;
@@ -172,7 +198,29 @@ static int notFoundHandler(const void* cls, const char* mime, Session* session, 
 
 static int basicAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection)
 {
-    return 0;
+    int result;
+    char* reply;
+    Response* response;
+
+    if (authenticate(connection) == AUTHENTICATED) {
+        if (asprintf(&reply, "{\"result\":\"OK\", \"description\": \"authenticated\"}") == -1) {
+            /* TODO: check which error is better. Internal Server Error */
+            return MHD_NO;
+        }
+    } else {
+        /* user not authenticated or auth credentials not present... ask the client to perform authentication */
+        return askForAuthentication(connection, ASK_REALM);
+    }
+
+    /* create the response, then add session cookie and Content-Type */
+    response = MHD_create_response_from_buffer(strlen(reply), (void*)reply, MHD_RESPMEM_MUST_FREE);
+    addSessionCookie(session, response);
+    addResponseHeader(response, MHD_HTTP_HEADER_CONTENT_TYPE, mime);
+
+    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    MHD_destroy_response(response);
+
+    return result;
 }
 
 static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection)
@@ -185,4 +233,41 @@ static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* ke
                               uint64_t off, size_t size)
 {
     return MHD_YES;
+}
+
+/* TODO: check for a better error management. Internal Server Error */
+/*       instead of the followinf MHD_NO */
+static int askForAuthentication(Connection* connection, const char* realm)
+{
+    int result;
+    Response* response;
+    char* headerValue;
+    const char* basicRealmPrefix = "Basic realm=";
+
+    response = MHD_create_response_from_buffer(0, NULL, MHD_RESPMEM_PERSISTENT);
+    if (!response) {
+        return MHD_NO;
+    }
+
+    headerValue = malloc(strlen(basicRealmPrefix) + strlen(realm) + 1);
+    if (!headerValue) {
+        return MHD_NO;
+    }
+
+    strcpy(headerValue, basicRealmPrefix);
+    strcat(headerValue, realm);
+
+    /* add the "WWW-Authenticate" header to the response */
+    result = addResponseHeader(response, MHD_HTTP_HEADER_WWW_AUTHENTICATE, headerValue);
+    free(headerValue);
+
+    if (!result) {
+        MHD_destroy_response(response);
+        return MHD_NO;
+    }
+
+    result = MHD_queue_response(connection, MHD_HTTP_UNAUTHORIZED, response);
+    MHD_destroy_response(response);
+
+    return result;
 }

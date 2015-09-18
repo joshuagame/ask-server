@@ -7,7 +7,8 @@
 **                 v0.1
 ** ===========================================================================
 **
-** Copyright (C) 2015, The CodeGazoline Team - gargantua@codegazoline.it
+** Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
+** Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
 **
 ** protocol.h
 ** header for HTTP and routes management functionalities
@@ -25,7 +26,7 @@
 ** GNU General Public License for more details.
 **
 ** You should have received a copy of the GNU General Public License
-** along with Nome - Programma.If not, see <http:**www.gnu.org/licenses/>.
+** along with Nome - Programma.If not, see <http://www.gnu.org/licenses/>.
 **
 ** ===========================================================================
 */
@@ -56,12 +57,13 @@ static int homeHandler(const void* cls, const char* mime, Session* session, Conn
 static int notFoundHandler(const void* cls, const char* mime, Session* session, Connection* connection);
 static int basicAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection);
 static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection);
+static int askForAuthentication(Connection* connection, const char* realm);
 
 /* Ask Server Routes */
 static Route routes[] = {
         {"/", "text/html", &homeHandler, HOME_PAGE, false},
         {"/ask", "text/html", &homeHandler, API_HOME_PAGE, false},
-        {"/ask/authb", NULL, &basicAuthHandler, API_HOME_PAGE, true},
+        {"/ask/authb", "application/json; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
         {"/ask/authf", NULL, &formBasedAuthHandler, API_HOME_PAGE, true},
         {"/ask/login", NULL, &homeHandler, API_HOME_PAGE, false},
         {NULL, NULL, &notFoundHandler, NULL}

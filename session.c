@@ -7,7 +7,8 @@
 **                 v0.1
 ** ===========================================================================
 **
-** Copyright (C) 2015, The CodeGazoline Team - gargantua@codegazoline.it
+** Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
+** Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
 **
 ** session.c
 ** ASK Server session management functionalities
@@ -25,7 +26,7 @@
 ** GNU General Public License for more details.
 **
 ** You should have received a copy of the GNU General Public License
-** along with Nome - Programma.If not, see <http:**www.gnu.org/licenses/>.
+** along with Nome - Programma.If not, see <http://www.gnu.org/licenses/>.
 **
 ** ===========================================================================
 */
@@ -82,4 +83,9 @@ void addSessionCookie(Session* session, Response* response)
     if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
         perror("Unable to set session cookie header.\n");
     }
+}
+
+const char* getSessionCookie(Connection* connection)
+{
+    return MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME);
 }

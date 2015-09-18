@@ -6,7 +6,8 @@
 #       v1.0.0_alpha-1
 # ===========================================================================
 #
-# Copyright (C) 2015, The CodeGazoline Team - gargantua@codegazoline.it
+# Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
+# Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
 #
 # CMakeLists.txt
 # main entry point for the ASK Server
@@ -49,7 +50,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 
 # source code
-set(SOURCE_FILES askd.c config.c session.c protocol.c version.h ini.h ini.c ask.h protocol.h)
+set(SOURCE_FILES askd.c config.c session.c protocol.c authentication.c version.h ini.h ini.c ask.h protocol.h)
 
 # include directories
 include(FindMicroHttpd)

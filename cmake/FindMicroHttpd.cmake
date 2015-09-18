@@ -6,7 +6,8 @@
 #                 v0.1
 # ===========================================================================
 #
-# Copyright (C) 2015, The CodeGazoline Team - gargantua@codegazoline.it
+# Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
+# Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
 #
 # FindMicroHttpd.cmake
 # main entry point for the ASK Server
