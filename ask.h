@@ -76,6 +76,7 @@
 
 #define AUTHENTICATED MHD_YES
 #define NOT_AUTHENTICATED MHD_NO
+#define NO_BASIC_AUTH_INFO 0x001
 
 
 /** configuration */
@@ -98,8 +99,11 @@ extern unsigned int commandLineConfiguredParams;
 
 /** request and session */
 
+#define J_USERNAME "j_username"
+#define J_PASSWORD "j_password"
+
 struct FormCredentials {
-    char username[64];
+    char username[256];
     char password[64];
 };
 
@@ -133,6 +137,10 @@ void configure(int argc, char *const *argv);
 Session* getSession(struct MHD_Connection* connection);
 void addSessionCookie(Session* session, Response* response);
 const char* getSessionCookie(Connection* connection);
+void setSessionUsername(Session* session, size_t size, uint64_t offset, const char* data);
+void setSessionPassword(Session* session, size_t size, uint64_t offset, const char* data);
+const char* getSessionUsername(Session* session);
+const char* getSessionPassword(Session* session);
 
 /* protocol.c */
 
@@ -143,6 +151,6 @@ void requestCompletedCallback(void* cls, struct MHD_Connection* connection,
 const char* getHeaderValue(Connection* connection, const char* headerName);
 
 /* authentication.c */
-int authenticate(Connection* connection);
+int authenticate(Connection* connection, Session* session);
 
 #endif //ASK_SERVER_ASK_H

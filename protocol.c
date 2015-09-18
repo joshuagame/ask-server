@@ -32,6 +32,7 @@
 */
 
 #include "protocol.h"
+#include "ask.h"
 
 int requestHandler(void* cls, Connection* connection, const char* url, const char* method,
                    const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr)
@@ -202,7 +203,7 @@ static int basicAuthHandler(const void* cls, const char* mime, Session* session,
     char* reply;
     Response* response;
 
-    if (authenticate(connection) == AUTHENTICATED) {
+    if (authenticate(connection, session) == AUTHENTICATED) {
         if (asprintf(&reply, "{\"result\":\"OK\", \"description\": \"authenticated\"}") == -1) {
             /* TODO: check which error is better. Internal Server Error */
             return MHD_NO;
@@ -232,6 +233,25 @@ static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* ke
                               const char* contentType, const char* transferEncoding, const char* data,
                               uint64_t off, size_t size)
 {
+    Request* request = cls;
+    /* TODO: check for request == NULL */
+    Session* session = request->session;
+
+    /* get the form param j_username */
+    if (strcmp(J_USERNAME, key) == 0) {
+        setSessionUsername(session, size, off, data);
+        fprintf(stderr, "j_username: '\%s'\n", getSessionUsername(session));
+        return MHD_YES;
+    }
+
+    /* get the form param j_password */
+    if (strcmp(J_PASSWORD, key) == 0) {
+        setSessionPassword(session, size, off, data);
+        fprintf(stderr, "j_password: '\%s'\n", getSessionPassword(session));
+        return MHD_YES;
+    }
+
+    fprintf(stderr, "Unsupported form value '%s'\n", key);
     return MHD_YES;
 }
 

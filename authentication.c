@@ -86,7 +86,7 @@ static int basicAuthentication(Connection* connection)
 
     /* no Basic info at all */
     if (authorizationHeaderValue == NULL) {
-        return 0;
+        return NO_BASIC_AUTH_INFO;
     }
 
     /* malformed "Authorization" header value */
@@ -117,14 +117,39 @@ static int basicAuthentication(Connection* connection)
     return authenticated ? AUTHENTICATED : NOT_AUTHENTICATED;
 }
 
-int authenticate(Connection* connection)
+static int formBasedAuthentication(Connection* connection, Session* session)
+{
+    const char* username = getSessionUsername(session);
+    const char* password = getSessionPassword(session);
+
+    if (strlen(username) == 0 || strlen(password) == 0) {
+        return NOT_AUTHENTICATED;
+    }
+
+    if (strcmp(username, testUsername) == 0 && strcmp(password, testPassword) == 0) {
+        return AUTHENTICATED;
+    }
+
+    return NOT_AUTHENTICATED;
+}
+
+int authenticate(Connection* connection, Session* session)
 {
     /* if we found the ASKSESSION cookie, the user is authenticated */
     if (getSessionCookie(connection) != NULL) {
         return AUTHENTICATED;
     }
 
-    /* if no cookie has been found, check for authentication credentials */
-    return basicAuthentication(connection);
+    /*
+     * if no cookie has been found, check for authentication credentials:
+     * here we first try for Basic Authentication and if there are no Basic Auth info, then we check for
+     * FORM-Based username and password (here we had username and password in session because of the post iterator)
+     */
+    int auth = basicAuthentication(connection);
+    if (auth == NO_BASIC_AUTH_INFO) {
+        auth = formBasedAuthentication(connection, session);
+    }
+
+    return auth;
 }
 

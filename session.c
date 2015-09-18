@@ -89,3 +89,36 @@ const char* getSessionCookie(Connection* connection)
 {
     return MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME);
 }
+
+/* TODO: try and unify the following into one function */
+void setSessionUsername(Session* session, size_t size, uint64_t offset, const char* data)
+{
+    if (size + offset > sizeof(session->fcred.username)) {
+        size = sizeof(session->fcred.username) - offset;
+    }
+    memcpy(&session->fcred.username[offset], data, size);
+    if (size + offset < sizeof(session->fcred.username)) {
+        session->fcred.username[size + offset] = '\0';
+    }
+}
+
+void setSessionPassword(Session* session, size_t size, uint64_t offset, const char* data)
+{
+    if (size + offset > sizeof(session->fcred.password)) {
+        size = sizeof(session->fcred.password) - offset;
+    }
+    memcpy(&session->fcred.password[offset], data, size);
+    if (size + offset < sizeof(session->fcred.password)) {
+        session->fcred.password[size + offset] = '\0';
+    }
+}
+
+const char* getSessionUsername(Session* session)
+{
+    return session->fcred.username;
+}
+
+const char* getSessionPassword(Session* session)
+{
+    return session->fcred.password;
+}
