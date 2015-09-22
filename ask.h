@@ -53,7 +53,11 @@
 #include <inttypes.h>
 #include <microhttpd.h>
 #ifndef __APPLE__
+#ifdef __CYGWIN__
+#include <sys/errno.h>
+#else
 #include <bits/errno.h>
+#endif
 #endif
 
 #define ASK_REALM "\"ask\""
