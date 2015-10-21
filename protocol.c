@@ -204,7 +204,7 @@ static int basicAuthHandler(const void* cls, const char* mime, Session* session,
     Response* response;
 
     if (authenticate(connection, session) == AUTHENTICATED) {
-        if (asprintf(&reply, "{\"result\":\"OK\", \"description\": \"authenticated\"}") == -1) {
+        if (asprintf(&reply, "") == -1) {
             /* TODO: check which error is better. Internal Server Error */
             return MHD_NO;
         }

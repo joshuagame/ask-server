@@ -83,6 +83,7 @@ static int basicAuthentication(Connection* connection)
     Session* session;
 
     authorizationHeaderValue = getHeaderValue(connection, MHD_HTTP_HEADER_AUTHORIZATION);
+    printf("authorizationHeaderValue: %s\n", authorizationHeaderValue);
 
     /* no Basic info at all */
     if (authorizationHeaderValue == NULL) {
@@ -119,6 +120,7 @@ static int basicAuthentication(Connection* connection)
 
 static int formBasedAuthentication(Connection* connection, Session* session)
 {
+    printf("\n\nformBasedAuthentication()");
     const char* username = getSessionUsername(session);
     const char* password = getSessionPassword(session);
 

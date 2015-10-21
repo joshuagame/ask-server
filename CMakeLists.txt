@@ -54,8 +54,9 @@ set(SOURCE_FILES askd.c config.c session.c protocol.c authentication.c version.h
 
 # include directories
 include(FindMicroHttpd)
-INCLUDE_DIRECTORIES(${MICROHTTPD_INCLUDE_DIRS})
+include(FindLibCURL)
+INCLUDE_DIRECTORIES(${MICROHTTPD_INCLUDE_DIRS} ${LibCURL_INCLUDE_DIR})
 
 # target and Libraries
 add_executable(ask_server ${SOURCE_FILES})
-TARGET_LINK_LIBRARIES(ask_server ${MICROHTTPD_LIBRARIES})
+TARGET_LINK_LIBRARIES(ask_server ${MICROHTTPD_LIBRARIES} ${LibCURL_LIBRARIES})

@@ -63,8 +63,8 @@ static int askForAuthentication(Connection* connection, const char* realm);
 static Route routes[] = {
         {"/", "text/html", &homeHandler, HOME_PAGE, false},
         {"/ask", "text/html", &homeHandler, API_HOME_PAGE, false},
-        {"/ask/authb", "application/json; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
-        {"/ask/authf", NULL, &formBasedAuthHandler, API_HOME_PAGE, true},
+        {"/ask/auth", "text/plain; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
+        {"/ask/auth", "text/plain; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
         {"/ask/login", NULL, &homeHandler, API_HOME_PAGE, false},
         {NULL, NULL, &notFoundHandler, NULL}
 };

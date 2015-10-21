@@ -80,7 +80,7 @@
 
 #define AUTHENTICATED MHD_YES
 #define NOT_AUTHENTICATED MHD_NO
-#define NO_BASIC_AUTH_INFO 0x001
+#define NO_BASIC_AUTH_INFO 0x100
 
 
 /** configuration */
