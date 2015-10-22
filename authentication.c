@@ -34,36 +34,122 @@
 #include "ask.h"
 #include "base64.h"
 
+#define BASE64_LOOKUP_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
 const char* testUsername = TEST_USER;
 const char* testPassword = TEST_PASSWORD;
 
-//static char* extractUsername(const char* basicAuth)
-//{
-//    char* username;
-//
-//    int i = 0;
-//    for (i = 0; i < sizeof(basicAuth); i++) {
-//        if (basicAuth[i] == ':') {
-//            break;
-//        }
-//    }
-//
-//    if (i < sizeof(basicAuth)) {
-//        username = malloc(sizeof(char)*i + 1);
+static char* base64Encode(const char* str)
+{
+    int i;
+    unsigned long l;
+    char* encoded;
+    size_t strLength = strlen(str);
+
+    if ((encoded = malloc(strLength * 2)) == NULL) {
+        return encoded;
+    }
+
+    encoded[0] = 0;
+    for (i = 0; i < strLength; i += 3) {
+        l = (((unsigned long)str[i]) << 16)
+            | (((i + 1) < strLength) ? (((unsigned long) str[i + 1]) << 8) :0)
+            | (((i + 2) < strLength) ? ((unsigned long) str[i + 2]) :0);
+
+        strncat(encoded, &BASE64_LOOKUP_CHARS[(l >> 18) & 0x3F], 1);
+        strncat(encoded, &BASE64_LOOKUP_CHARS[(l >> 12) & 0x3F], 1);
+        if (i + 1 < strLength) {
+            strncat(encoded, &BASE64_LOOKUP_CHARS[(l >> 6) & 0x3F], 1);
+        }
+        if (i + 2 < strLength) {
+            strncat(encoded, &BASE64_LOOKUP_CHARS[l & 0x3F], 1);
+        }
+    }
+
+    if (strLength % 3) {
+        strncat(encoded, "===", 3 - strLength % 3);
+    }
+
+    return encoded;
+}
+
+
+static unsigned int extractUsername(const char* basicAuth, char** username)
+{
+    unsigned int i = 0;
+    for (i = 0; i < sizeof(basicAuth); i++) {
+        if (basicAuth[i] == ':') {
+            break;
+        }
+    }
+
+    printf("i: %d\n", i);
+    if (i < sizeof(basicAuth)) {
+        printf("malloc-ing username");
+        *username = (char*)malloc(i + 1);
+        (*username)[i+1] = '\0';
+        printf("... OK\n");
+
+        strncpy(*username, basicAuth, i);
 //        int k = 0;
 //        for (k = 0; k < i; k++) {
-//            username[k] = basicAuth[i];
+//            username[k] = basicAuth[k];
 //        }
-//        printf("username: %s", username);
-//    }
-//
-//    return username;
-//}
+
+        printf("... OK: %s\n", *username);
+    }
+
+    return i;
+}
+
+static int _basicAuthentication(Connection* connection)
+{
+    const char* authorizationHeaderValue;
+    char* expectedB64;
+    char* expected;
+    const char* basicPrefix = "Basic ";
+    int authenticated;
+    Session* session;
+
+    authorizationHeaderValue = getHeaderValue(connection, MHD_HTTP_HEADER_AUTHORIZATION);
+
+    /* no Basic info at all */
+    if (authorizationHeaderValue == NULL) {
+        return NO_BASIC_AUTH_INFO;
+    }
+
+    /* malformed "Authorization" header value */
+    if (strncmp(authorizationHeaderValue, basicPrefix, strlen(basicPrefix)) != 0) {
+        return 0;
+    }
+
+    /* allocate the string for the expected Basic Auth Header value */
+    if ((expected = malloc(strlen(testUsername) + 1 + strlen(testPassword) + 1)) == NULL) {
+        return 0;
+    }
+
+    /* create the expected value and encode it into its Base64 representation */
+    strcpy(expected, testUsername);
+    strcat(expected, ":");
+    strcat(expected, testPassword);
+
+    expectedB64 = base64Encode(expected);
+    free(expected);
+
+    if (expectedB64 == NULL) {
+        return 0;
+    }
+
+    authenticated = (strcmp(authorizationHeaderValue + strlen(basicPrefix), expectedB64) == 0);
+    free(expectedB64);
+
+    return authenticated ? AUTHENTICATED : NOT_AUTHENTICATED;
+}
 
 static int basicAuthentication(Connection* connection)
 {
     const char* authorizationHeaderValue;
-    unsigned char* expectedB64 = NULL;
+    char* expectedB64;
     unsigned char* expected;
     const char* basicPrefix = "Basic ";
     int authenticated;
@@ -93,9 +179,9 @@ static int basicAuthentication(Connection* connection)
     strcat(expected, testPassword);
 
     //Base64encode(expectedB64, expected, sizeof(expected));
-    //Base64Encode(expected, strlen(expected), &expectedB64);
-    size_t* dlen = 0;
-    base64_decode(expectedB64, dlen, expected, sizeof(expected));
+    Base64Encode(expected, strlen(expected), &expectedB64);
+//    size_t* dlen = 0;
+//    base64_decode(expectedB64, dlen, expected, sizeof(expected));
     free(expected);
 
     printf("expected: %s\n", expectedB64);
@@ -105,20 +191,25 @@ static int basicAuthentication(Connection* connection)
     }
 
     printf("decoding auth info:\n");
-    unsigned char* base64DecodeOutput;
+    char* base64DecodeOutput;
     size_t* decodedSize = 0;
     //Base64decode(base64DecodeOutput, expectedB64);
-//    Base64Decode(expectedB64, &base64DecodeOutput, &decodedSize);
-    base64_decode(base64DecodeOutput, decodedSize, expectedB64, sizeof(expectedB64));
+    Base64Decode(expectedB64, &base64DecodeOutput, &decodedSize);
+    //base64_decode(base64DecodeOutput, decodedSize, expectedB64, sizeof(expectedB64));
     printf("Output: %s %d\n", base64DecodeOutput, decodedSize);
 
-//    extractUsername(expectedB64);
+    char* username;
+    size_t ulen = extractUsername(base64DecodeOutput, &username);
+    printf("ulen: %u\n", ulen);
+    printf("sizeof username: %u\n", sizeof username);
+    printf("*** username: %s\n", username);
 
 //    httpBasicAuthentication(expectedB64);
 
 
     authenticated = (strcmp(authorizationHeaderValue + strlen(basicPrefix), expectedB64) == 0);
     free(expectedB64);
+    free(username);
 
     return authenticated ? AUTHENTICATED : NOT_AUTHENTICATED;
 }

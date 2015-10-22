@@ -99,7 +99,12 @@ Session* getSession(struct MHD_Connection* connection)
         return NULL;
     }
 
-    snprintf(session->id, sizeof(session->id), "%s", generateSessionId());
+    unsigned int v1 = (unsigned int)random();
+    unsigned int v2 = (unsigned int)random();
+    unsigned int v3 = (unsigned int)random();
+    unsigned int v4 = (unsigned int)random();
+    snprintf(session->id, sizeof(session->id), "%X%X%X%X", v1, v2, v3, v4);
+    //snprintf(session->id, sizeof(session->id), "%s", generateSessionId());
     session->rc++;
     session->start = time(NULL);
 
