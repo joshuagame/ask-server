@@ -89,12 +89,14 @@ struct Config {
     int port;
     bool ssl;
     const char* name;
+    const char* http_auth_url;
+    bool http_auth_ssl;
 };
 
 enum CL_CONF {
     NONE = 0,
     PORT = 1,
-    SSL = 2
+    _SSL = 2
 };
 
 extern struct Config globalConfig;
@@ -156,5 +158,8 @@ const char* getHeaderValue(Connection* connection, const char* headerName);
 
 /* authentication.c */
 int authenticate(Connection* connection, Session* session);
+
+/* http_auth_client.c */
+int httpBasicAuthentication(const char* username, const char* basicAuth);
 
 #endif //ASK_SERVER_ASK_H

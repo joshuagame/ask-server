@@ -50,13 +50,14 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 
 # source code
-set(SOURCE_FILES askd.c config.c session.c protocol.c authentication.c version.h ini.h ini.c ask.h protocol.h)
+set(SOURCE_FILES askd.c config.c session.c protocol.c authentication.c httpAuthClient.c base64.c version.h ini.h ini.c ask.h protocol.h session.h httpAuthClient.h base64.h)
 
 # include directories
 include(FindMicroHttpd)
 include(FindLibCURL)
-INCLUDE_DIRECTORIES(${MICROHTTPD_INCLUDE_DIRS} ${LibCURL_INCLUDE_DIR})
+include(FindOpenSSL)
+INCLUDE_DIRECTORIES(${MICROHTTPD_INCLUDE_DIRS} ${LibCURL_INCLUDE_DIR} ${OpenSSL_INCLUDE_DIR})
 
 # target and Libraries
 add_executable(ask_server ${SOURCE_FILES})
-TARGET_LINK_LIBRARIES(ask_server ${MICROHTTPD_LIBRARIES} ${LibCURL_LIBRARIES})
+TARGET_LINK_LIBRARIES(ask_server ${MICROHTTPD_LIBRARIES} ${LibCURL_LIBRARIES} ${OpenSSL_CRYPTO_LIBRARY})

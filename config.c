@@ -75,7 +75,7 @@ void configure(int argc, char *const *argv)
                 break;
             case 's':
                 globalConfig.ssl = true;
-                commandLineConfiguredParams |= SSL;
+                commandLineConfiguredParams |= _SSL;
 
                 /* if no port value as command line param, then set default ssl port value */
                 if ((commandLineConfiguredParams & PORT) == 0) {
@@ -126,10 +126,15 @@ static int loadConfigurationHandler(void* user, const char* section, const char*
             pconfig->port = atoi(value);
         }
     } else if (MATCH("server", "ssl")) {
-        if ((commandLineConfiguredParams & SSL) == 0) {
+        if ((commandLineConfiguredParams & _SSL) == 0) {
             /* if no SSL value as command line param here we get INI configuration */
             pconfig->ssl = strcmp(strdup(value), "true") == 0 ? true : false;
         }
+    } else if (MATCH("http_auth_client", "url")) {
+//        snprintf(pconfig->http_auth_url, sizeof(pconfig->http_auth_url), "%s", value);
+        pconfig->http_auth_url = value;
+    } else if (MATCH("http_auth_client", "ssl")) {
+        pconfig->http_auth_ssl = atoi(value);
     } else {
         return 0;  /* unknown section/name, error */
     }

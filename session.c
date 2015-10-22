@@ -31,7 +31,48 @@
 ** ===========================================================================
 */
 
-#include "ask.h"
+#include "session.h"
+
+
+char *MD5Hash(const char *str, int length) {
+    int n;
+    MD5_CTX c;
+    unsigned char digest[16];
+    char *out = (char*)malloc(33);
+
+    MD5_Init(&c);
+
+    while (length > 0) {
+        if (length > 512) {
+            MD5_Update(&c, str, 512);
+        } else {
+            MD5_Update(&c, str, length);
+        }
+        length -= 512;
+        str += 512;
+    }
+
+    MD5_Final(digest, &c);
+
+    for (n = 0; n < 16; ++n) {
+        snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
+    }
+
+    return out;
+}
+
+static char* generateSessionId()
+{
+    char* sessionId;
+    unsigned int v1 = (unsigned int)random();
+    unsigned int v2 = (unsigned int)random();
+    unsigned int v3 = (unsigned int)random();
+    unsigned int v4 = (unsigned int)random();
+    snprintf(sessionId, sizeof(sessionId), "%X%X%X%X", v1, v2, v3, v4);
+
+    return MD5Hash(sessionId, sizeof(sessionId));
+
+}
 
 Session* getSession(struct MHD_Connection* connection)
 {
@@ -58,14 +99,7 @@ Session* getSession(struct MHD_Connection* connection)
         return NULL;
     }
 
-    /* generate a random unique session id.
-     * Note: this is not so secure, so, change the way we do it!
-     */
-    unsigned int v1 = (unsigned int)random();
-    unsigned int v2 = (unsigned int)random();
-    unsigned int v3 = (unsigned int)random();
-    unsigned int v4 = (unsigned int)random();
-    snprintf(session->id, sizeof(session->id), "%X%X%X%X", v1, v2, v3, v4);
+    snprintf(session->id, sizeof(session->id), "%s", generateSessionId());
     session->rc++;
     session->start = time(NULL);
 

@@ -39,51 +39,11 @@
 
 static void startServer();
 
-/**
- * Main
- */
 int main(int argc, char *const *argv) {
-
-    CURL *curl;
-    CURLcode res;
-
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-
-    curl = curl_easy_init();
-    if(curl) {
-        struct curl_slist *chunk = NULL;
-        chunk = curl_slist_append(chunk, "Authorization: Basic bHVjYS5zdGFzaW86ZGV2ZWxvcDIwMDA=");
-
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-        curl_easy_setopt(curl, CURLOPT_URL, "https://www.itresources.it/home/luca.stasio/drafts.rss?auth=ba");
-
-        //#ifdef SKIP_PEER_VERIFICATION
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-
-        //#ifdef SKIP_HOSTNAME_VERIFICATION
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-
-        /* Perform the request, res will get the return code */
-        res = curl_easy_perform(curl);
-        /* Check for errors */
-        if(res != CURLE_OK)
-            fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                    curl_easy_strerror(res));
-
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-    }
-
-    curl_global_cleanup();
-
-    return 0;
-
-    //configure(argc, argv);
-
+    configure(argc, argv);
     /* start the server */
-    //startServer();
-
-    //return 0;
+    startServer();
+    return 0;
 }
 
 void startServer()
@@ -137,21 +97,3 @@ void startServer()
 
     MHD_stop_daemon(mhdd);
 }
-
-/* ------------------------------------------------------------------------------------------------------------- */
-/* ROUTES & HANLDERS                                                                                                */
-/* ------------------------------------------------------------------------------------------------------------- */
-
-
-
-
-/* ------------------------------------------------------------------------------------------------------------- */
-/* PROTOCOL                                                                                                      */
-/* ------------------------------------------------------------------------------------------------------------- */
-
-
-
-
-/* ------------------------------------------------------------------------------------------------------------- */
-/* AUTHENTICATION                                                                                                */
-/* ------------------------------------------------------------------------------------------------------------- */
