@@ -89,7 +89,7 @@ struct Config {
     int port;
     bool ssl;
     const char* name;
-    const char* http_auth_url;
+    char* http_auth_url;
     bool http_auth_ssl;
 };
 

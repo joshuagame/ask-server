@@ -60,7 +60,7 @@ void configure(int argc, char *const *argv)
     globalConfig.name = argv[0];
 
     printf("\n>> ASK server (%s) initialization\n", globalConfig.name);
-    printf(">> Loading configuration from %s\n", configFileName);
+    printf(">> Loading configuration fr    om %s\n", configFileName);
 
     int opt = getopt_long( argc, argv, shortOptions, longOptions, &longIndex );
     while (opt != -1) {
@@ -132,9 +132,12 @@ static int loadConfigurationHandler(void* user, const char* section, const char*
         }
     } else if (MATCH("http_auth_client", "url")) {
 //        snprintf(pconfig->http_auth_url, sizeof(pconfig->http_auth_url), "%s", value);
-        pconfig->http_auth_url = value;
+        printf("-----------------------%s\n", value);
+        pconfig->http_auth_url = malloc(strlen(value));
+        strcpy(pconfig->http_auth_url, value);
+        printf("-----------------------%s\n", pconfig->http_auth_url);
     } else if (MATCH("http_auth_client", "ssl")) {
-        pconfig->http_auth_ssl = atoi(value);
+        pconfig->http_auth_ssl = strcmp(strdup(value), "true") == 0 ? true : false;
     } else {
         return 0;  /* unknown section/name, error */
     }

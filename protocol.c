@@ -206,7 +206,7 @@ static int basicAuthHandler(const void* cls, const char* mime, Session* session,
     printf("basicAuthHandler()");
     if (authenticate(connection, session) == AUTHENTICATED) {
         printf("authenticated by session cookie");
-        if (asprintf(&reply, "") == -1) {
+        if (asprintf(&reply, "AUTHENTICATED") == -1) {
             /* TODO: check which error is better. Internal Server Error */
             return MHD_NO;
         }

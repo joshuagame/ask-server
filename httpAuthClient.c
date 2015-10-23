@@ -32,15 +32,24 @@
 */
 
 #include "httpAuthClient.h"
+#include <curl/curl.h>
 
 static char* authUrl(const char* username)
 {
     printf("authUrl()\n");
+    if (globalConfig.http_auth_ssl) {
+        printf("\nSSL enabled\n");
+    } else {
+        printf("\nSSL not enabled\n");
+    }
     const char* proto = globalConfig.http_auth_ssl ? "https://" : "http://";
+    printf("PROTO: %s\n", proto);
+    printf("Base auth url: %s\n", globalConfig.http_auth_url);
 
-    char *url = malloc(strlen(globalConfig.http_auth_url) + strlen(username) - 1);
+    char *url = malloc(strlen(globalConfig.http_auth_url) +  strlen(username)- 1);
+
     printf("cerca di creare baseUrl\n");
-    snprintf(url, sizeof(url), globalConfig.http_auth_url, username);
+    sprintf(url, globalConfig.http_auth_url, username);
     printf("baseUrl creata\n");
     printf("baseUrl: %s\n", url);
 
@@ -49,9 +58,60 @@ static char* authUrl(const char* username)
 
 int httpBasicAuthentication(const char* username, const char* basicAuth)
 {
-    printf("httpBsicAuthentication()\n");
     char* url = authUrl(username);
-    printf("BaseURL: %s\n", url);
+    CURL *curl;
+    CURLcode res;
+    int result = 1;
+    char* authorizationHeader;
 
-    return 0;
+    printf("\n------------------------------------------------\n");
+    printf("performing Zimbra authentication http request:\n");
+    printf("\turl:             %s\n", url);
+    printf("\tusername:        %s\n", username);
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl = curl_easy_init();
+
+    if(curl) {
+        struct curl_slist *chunk = NULL;
+        int headerLen = strlen("Authorization: ") + strlen(basicAuth) + 1;
+
+        snprintf(authorizationHeader, headerLen, "Authorization: %s", basicAuth);
+        printf("\tAuthorization Header -->%s\n", authorizationHeader);
+
+        chunk = curl_slist_append(chunk, authorizationHeader);
+
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+
+        //#ifdef SKIP_PEER_VERIFICATION
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+
+        //#ifdef SKIP_HOSTNAME_VERIFICATION
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+
+        /* Perform the request, res will get the return code */
+        res = curl_easy_perform(curl);
+        printf("\n==> libCURL code: %d\n", res);
+        /* Check for errors */
+        if(res != CURLE_OK)
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+
+//        long httpCode = 0;
+//        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+//        printf("==> HTTP code: %d\n", httpCode);
+//        if (httpCode == 200 /*&& res != CURLE_ABORTED_BY_CALLBACK*/) {
+//            result = AUTHENTICATED;
+//        } else{
+//            result = NOT_AUTHENTICATED;
+//        }
+
+        /* always cleanup */
+        curl_easy_cleanup(curl);
+    }
+
+    curl_global_cleanup();
+    printf("------------------------------------------------\n");
+
+    return result;
 }

@@ -3,7 +3,7 @@
 
 
 int Base64Encode(const unsigned char* buffer, size_t length, char** b64text);
-int Base64Decode(char* b64message, unsigned char** buffer, size_t* length);
+int Base64Decode(char* b64message, /*unsigned*/ char** buffer, size_t* length);
 #endif //_BASE64_H_
 
 /*

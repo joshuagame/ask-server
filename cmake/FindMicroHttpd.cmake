@@ -9,9 +9,6 @@
 # Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
 # Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
 #
-# FindMicroHttpd.cmake
-# main entry point for the ASK Server
-#
 # This file is part of the ASK Server.
 #
 # The ASK Server is free software: you can redistribute it and/or modify

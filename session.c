@@ -32,46 +32,79 @@
 */
 
 #include "session.h"
+#include <uuid/uuid.h>
 
 
-char *MD5Hash(const char *str, int length) {
-    int n;
-    MD5_CTX c;
-    unsigned char digest[16];
-    char *out = (char*)malloc(33);
+//char *MD5Hash(const char *str, int length) {
+//    int n;
+//    MD5_CTX c;
+//    unsigned char digest[16];
+//    char *out = (char*)malloc(33);
+//
+//    MD5_Init(&c);
+//
+//    while (length > 0) {
+//        if (length > 512) {
+//            MD5_Update(&c, str, 512);
+//        } else {
+//            MD5_Update(&c, str, length);
+//        }
+//        length -= 512;
+//        str += 512;
+//    }
+//
+//    MD5_Final(digest, &c);
+//
+//    for (n = 0; n < 16; ++n) {
+//        snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
+//    }
+//
+//    return out;
+//}
 
-    MD5_Init(&c);
+//static char* MD5hash(const char* str, int length)
+//{
+//    unsigned char digest[16];
+//
+//    printf("string length: %d\n", strlen(str));
+//
+//    MD5_CTX ctx;
+//    MD5_Init(&ctx);
+//    MD5_Update(&ctx, str, strlen(str));
+//    MD5_Final(digest, &ctx);
+//
+//    //char mdString[33];
+//    char* md5String = malloc(33);
+//    for (int i = 0; i < 16; i++)
+//        sprintf(&md5String[i*2], "%02x", (unsigned int)digest[i]);
+//
+//    printf("md5 digest: %s\n", md5String);
+//    return md5String;
+//}
+//
+//static void generateSessionId(char** md5String)
+//{
+//    char* sessionId;
+//    unsigned int v1 = (unsigned int)random();
+//    unsigned int v2 = (unsigned int)random();
+//    unsigned int v3 = (unsigned int)random();
+//    unsigned int v4 = (unsigned int)random();
+//    snprintf(sessionId, sizeof(sessionId), "%X%X%X%X", v1, v2, v3, v4);
+//
+//    *md5String = MD5hash(sessionId, sizeof(sessionId));
+//    free(sessionId);
+//}
 
-    while (length > 0) {
-        if (length > 512) {
-            MD5_Update(&c, str, 512);
-        } else {
-            MD5_Update(&c, str, length);
-        }
-        length -= 512;
-        str += 512;
-    }
-
-    MD5_Final(digest, &c);
-
-    for (n = 0; n < 16; ++n) {
-        snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
-    }
-
-    return out;
-}
-
-static char* generateSessionId()
+static char* generateSessionUUID()
 {
-    char* sessionId;
-    unsigned int v1 = (unsigned int)random();
-    unsigned int v2 = (unsigned int)random();
-    unsigned int v3 = (unsigned int)random();
-    unsigned int v4 = (unsigned int)random();
-    snprintf(sessionId, sizeof(sessionId), "%X%X%X%X", v1, v2, v3, v4);
+    uuid_t uuid;
+    char* uuidString = malloc(37);
 
-    return MD5Hash(sessionId, sizeof(sessionId));
+    uuid_generate_time_safe(uuid);
+    uuid_unparse_lower(uuid, uuidString);
+    printf("Session UUID: %s\n", uuidString);
 
+    return uuidString;
 }
 
 Session* getSession(struct MHD_Connection* connection)
@@ -103,8 +136,10 @@ Session* getSession(struct MHD_Connection* connection)
     unsigned int v2 = (unsigned int)random();
     unsigned int v3 = (unsigned int)random();
     unsigned int v4 = (unsigned int)random();
-    snprintf(session->id, sizeof(session->id), "%X%X%X%X", v1, v2, v3, v4);
-    //snprintf(session->id, sizeof(session->id), "%s", generateSessionId());
+//    snprintf(session->id, sizeof(session->id), "%X%X%X%X", v1, v2, v3, v4);
+    char* sessionUUID = generateSessionUUID();
+    snprintf(session->id, sizeof(session->id), "%s", sessionUUID);
+    free(sessionUUID);
     session->rc++;
     session->start = time(NULL);
 

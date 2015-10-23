@@ -37,7 +37,9 @@
 #include "ask.h"
 #include <openssl/md5.h>
 
-static char* MD5Hash(const char *str, int length);
-static char* generateSessionId();
+//static char* MD5Hash(const char *str, int length);
+//static char* MD5hash(const char *str, int length);
+//static void generateSessionId(char** md5String);
+static char* generateSessionUUID();
 
 #endif
