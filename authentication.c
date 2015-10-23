@@ -122,8 +122,8 @@ static int basicAuthentication(Connection* connection)
     /* performs Zimbra authentication */
     authenticated =  httpBasicAuthentication(username, authorizationHeaderValue);
 
-    free(username);
-    free(authenticationData);
+    //free(username);
+    //free(authenticationData);
 
     return authenticated;
 

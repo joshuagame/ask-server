@@ -62,49 +62,42 @@ int httpBasicAuthentication(const char* username, const char* basicAuth)
     CURL *curl;
     CURLcode res;
     int result = 1;
-    char* authorizationHeader;
 
     printf("\n------------------------------------------------\n");
     printf("performing Zimbra authentication http request:\n");
-    printf("\turl:             %s\n", url);
-    printf("\tusername:        %s\n", username);
+    printf("url:           %s\n", url);
+    printf("username:      %s\n", username);
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
 
     if(curl) {
         struct curl_slist *chunk = NULL;
-        int headerLen = strlen("Authorization: ") + strlen(basicAuth) + 1;
+        int len = strlen("Authorization: ") + strlen(basicAuth) + 1;
 
-        snprintf(authorizationHeader, headerLen, "Authorization: %s", basicAuth);
-        printf("\tAuthorization Header -->%s\n", authorizationHeader);
+        char* authorizationHeader;
+        authorizationHeader = malloc(len);
+        snprintf(authorizationHeader, len, "Authorization: %s", basicAuth);
+        printf("%s\n", authorizationHeader);
 
         chunk = curl_slist_append(chunk, authorizationHeader);
 
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
         curl_easy_setopt(curl, CURLOPT_URL, url);
-
-        //#ifdef SKIP_PEER_VERIFICATION
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-
-        //#ifdef SKIP_HOSTNAME_VERIFICATION
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
 
         /* Perform the request, res will get the return code */
         res = curl_easy_perform(curl);
-        printf("\n==> libCURL code: %d\n", res);
         /* Check for errors */
         if(res != CURLE_OK)
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 
-//        long httpCode = 0;
-//        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-//        printf("==> HTTP code: %d\n", httpCode);
-//        if (httpCode == 200 /*&& res != CURLE_ABORTED_BY_CALLBACK*/) {
-//            result = AUTHENTICATED;
-//        } else{
-//            result = NOT_AUTHENTICATED;
-//        }
+        /* and get HTTP response code */
+        long httpCode = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+        result = httpCode == 200 && res != CURLE_ABORTED_BY_CALLBACK ? AUTHENTICATED : NOT_AUTHENTICATED;
 
         /* always cleanup */
         curl_easy_cleanup(curl);

@@ -100,7 +100,8 @@ static char* generateSessionUUID()
     uuid_t uuid;
     char* uuidString = malloc(37);
 
-    uuid_generate_time_safe(uuid);
+    uuid_generate_time(uuid);
+    //uuid_generate_time_safe(uuid);
     uuid_unparse_lower(uuid, uuidString);
     printf("Session UUID: %s\n", uuidString);
 
