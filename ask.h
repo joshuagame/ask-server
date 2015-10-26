@@ -133,6 +133,20 @@ typedef struct {
 typedef struct MHD_Response Response;
 typedef struct MHD_Connection Connection;
 
+/** simple log engine structures */
+#define TPL_IDENT "ask"
+
+enum tp_log_level {
+    TPL_DEBUG,
+    TPL_INFO,
+    TPL_ERR,
+    TPL_EMERG,
+};
+
+enum tp_log_mode {
+    TPLM_SYSLOG,
+    TPLM_FILE,
+};
 
 /** forward (only public) function declarations */
 
@@ -161,5 +175,10 @@ int authenticate(Connection* connection, Session* session);
 
 /* http_auth_client.c */
 int httpBasicAuthentication(const char* username, const char* basicAuth);
+
+/* log.c */
+void tp_log_init(int mode, int level, int fd);
+void tp_log_write(int level, const char *fmt, ...);
+void tp_log_close(void);
 
 #endif //ASK_SERVER_ASK_H

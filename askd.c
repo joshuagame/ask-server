@@ -35,19 +35,37 @@
 #define _GNU_SOURCE         /*!< this is for asprintf() */
 
 #include "ask.h"
+#include <fcntl.h>
 
 static void startServer();
+static struct MHD_Daemon* mhdd;
+
+static void intSignalHandler(int s) {
+    tp_log_write(TPL_INFO, "Shutting down the server");
+    MHD_stop_daemon(mhdd);
+    tp_log_write(TPL_INFO, "ASK Server is down...");
+    tp_log_write(TPL_INFO, "Bye!");
+    tp_log_close();
+    exit(0);
+}
 
 int main(int argc, char *const *argv) {
+    signal(SIGINT, intSignalHandler);
+
+    int logFd = open("server.log", O_RDWR | O_APPEND | O_CREAT, S_IWRITE | S_IREAD);
+
+    tp_log_init(TPLM_FILE, TPL_DEBUG, logFd);
     configure(argc, argv);
-    /* start the server */
+    tp_log_write(TPL_INFO, "ASK server configured!");
+
     startServer();
+
     return 0;
 }
 
 void startServer()
 {
-    struct MHD_Daemon* mhdd;
+//    struct MHD_Daemon* mhdd;
     struct timeval tv;
     struct timeval* tvp;
     fd_set readFdSet;
@@ -63,6 +81,8 @@ void startServer()
                             MHD_OPTION_NOTIFY_COMPLETED, &requestCompletedCallback, NULL,
                             MHD_OPTION_END);
 
+    tp_log_write(TPL_INFO, "ASK server started");
+    tp_log_write(TPL_INFO, "server is listening on port %d", globalConfig.port);
     if (mhdd == NULL) {
         perror("Unable to start server: error initializing internal MHD server Daemon\n");
         exit(-1);
@@ -94,5 +114,5 @@ void startServer()
         MHD_run(mhdd);
     }
 
-    MHD_stop_daemon(mhdd);
+//    MHD_stop_daemon(mhdd);
 }

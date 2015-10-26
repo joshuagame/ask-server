@@ -47,7 +47,6 @@ static unsigned int extractUsername(const char* basicAuth, char** username)
             break;
         }
     }
-    printf("------>i: %u\n", i);
 
     if (i < len) {
         *username = (char*)malloc(i);
@@ -60,14 +59,12 @@ static unsigned int extractUsername(const char* basicAuth, char** username)
 
 static unsigned int extractAuthenticationData(const char* authenticationHeaderValue, char** authenticationData)
 {
-    printf("\nextractAuthenticationData()\n");
     unsigned int i = 0;
     char *line = strdup(authenticationHeaderValue);
-    printf("strdup() ok\n");
     char *basic = strtok(line, " ");
-    printf("basic: %s\n", basic);
+    tp_log_write(TPL_DEBUG, "basic: %s\n", basic);
     char *data = strtok(NULL, " ");
-    printf("data: %s\n", data);
+    tp_log_write(TPL_DEBUG, "data: %s\n", data);
 
     *authenticationData = data;
 
@@ -84,7 +81,7 @@ static int basicAuthentication(Connection* connection)
     Session* session;
 
     authorizationHeaderValue = getHeaderValue(connection, MHD_HTTP_HEADER_AUTHORIZATION);
-    printf("authorizationHeaderValue: %s\n", authorizationHeaderValue);
+    tp_log_write(TPL_DEBUG,"authorizationHeaderValue: %s\n", authorizationHeaderValue);
 
 
     /* no Basic info at all */
@@ -100,20 +97,17 @@ static int basicAuthentication(Connection* connection)
     /* extract the authentication data from Authorization header */
     char* authenticationData;
     extractAuthenticationData(authorizationHeaderValue, &authenticationData);
-    printf("\nAuthentication Data: %s\n", authenticationData);
+    tp_log_write(TPL_DEBUG,"\nAuthentication Data: %s\n", authenticationData);
 
     /* decode the authentication data */
     char* base64DecodeOutput;
     size_t decodedSize = 0;
     Base64Decode(authenticationData, &base64DecodeOutput, &decodedSize);
-    printf("Output: %s %d\n", base64DecodeOutput, decodedSize);
 
     /* extract the username */
     char* username;
     size_t ulen = extractUsername(base64DecodeOutput, &username);
-    printf("ulen: %u\n", ulen);
-    printf("sizeof username: %u\n", sizeof username);
-    printf("*** username: %s\n", username);
+    tp_log_write(TPL_DEBUG, "username: %s\n", username);
 
     if (username == NULL) {
         return 0;
@@ -131,7 +125,6 @@ static int basicAuthentication(Connection* connection)
 
 static int formBasedAuthentication(Connection* connection, Session* session)
 {
-    printf("\n\nformBasedAuthentication()");
     const char* username = getSessionUsername(session);
     const char* password = getSessionPassword(session);
 
@@ -148,10 +141,11 @@ static int formBasedAuthentication(Connection* connection, Session* session)
 
 int authenticate(Connection* connection, Session* session)
 {
-    printf("\n--------Authenticate()\n");
+    char* sessionCookieValue;
+    tp_log_write(TPL_INFO, "Authenticating");
     /* if we found the ASKSESSION cookie, the user is authenticated */
-    if (getSessionCookie(connection) != NULL) {
-        printf("--------session ok\n");
+    if ((sessionCookieValue = getSessionCookie(connection)) != NULL) {
+        tp_log_write(TPL_DEBUG, "session [%s] found", sessionCookieValue);
         return AUTHENTICATED;
     }
 
@@ -160,15 +154,14 @@ int authenticate(Connection* connection, Session* session)
      * here we first try for Basic Authentication and if there are no Basic Auth info, then we check for
      * FORM-Based username and password (here we had username and password in session because of the post iterator)
      */
-    printf("calling basicAuthentication()\n");
+    tp_log_write(TPL_DEBUG, "calling basicAuthentication()");
     int auth = basicAuthentication(connection);
-    printf("returned auth: %d\n", auth);
+    tp_log_write(TPL_DEBUG, "returned auth: %d\n", auth);
     if (auth == NO_BASIC_AUTH_INFO) {
-        printf("NO_BASIC_AUTH_INFO\n");
+        tp_log_write(TPL_DEBUG, "NO_BASIC_AUTH_INFO\n");
         auth = formBasedAuthentication(connection, session);
     }
 
-    printf("returning auth\n");
     return auth;
 }
 

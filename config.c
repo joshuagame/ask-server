@@ -59,8 +59,10 @@ void configure(int argc, char *const *argv)
 
     globalConfig.name = argv[0];
 
-    printf("\n>> ASK server (%s) initialization\n", globalConfig.name);
-    printf(">> Loading configuration fr    om %s\n", configFileName);
+    tp_log_write(TPL_INFO, "ASK server (%s) initialization", globalConfig.name);
+    tp_log_write(TPL_INFO, "loading configuration from %s", configFileName);
+//    printf("\n>> ASK server (%s) initialization\n", globalConfig.name);
+//    printf(">> Loading configuration fr    om %s\n", configFileName);
 
     int opt = getopt_long( argc, argv, shortOptions, longOptions, &longIndex );
     while (opt != -1) {
@@ -93,6 +95,10 @@ void configure(int argc, char *const *argv)
 
     /* load configuration from file */
     loadConfiguration();
+    tp_log_write(TPL_INFO, "version: %s", ASK_VERSION);
+    tp_log_write(TPL_INFO, "listening port: %d", globalConfig.port);
+    tp_log_write(TPL_INFO, "SSL: %s", globalConfig.ssl ? "enabled" : "disabled");
+    tp_log_write(TPL_INFO, "Http Endpoint: http%s://localhost:%d/ask/auth", globalConfig.ssl ? "s" : "", globalConfig.port);
     printConfiguration();
 }
 
@@ -130,12 +136,11 @@ static int loadConfigurationHandler(void* user, const char* section, const char*
             /* if no SSL value as command line param here we get INI configuration */
             pconfig->ssl = strcmp(strdup(value), "true") == 0 ? true : false;
         }
+    } else if (MATCH("server", "log_level")) {
+
     } else if (MATCH("http_auth_client", "url")) {
-//        snprintf(pconfig->http_auth_url, sizeof(pconfig->http_auth_url), "%s", value);
-        printf("-----------------------%s\n", value);
         pconfig->http_auth_url = malloc(strlen(value));
         strcpy(pconfig->http_auth_url, value);
-        printf("-----------------------%s\n", pconfig->http_auth_url);
     } else if (MATCH("http_auth_client", "ssl")) {
         pconfig->http_auth_ssl = strcmp(strdup(value), "true") == 0 ? true : false;
     } else {
@@ -152,6 +157,6 @@ static void printConfiguration()
     printf("  Version         :     %s\n", ASK_VERSION);
     printf("  Listening port  :     %d\n", globalConfig.port);
     printf("  SSL             :     %s\n", globalConfig.ssl ? "enabled" : "disabled");
-    printf("  Http Endpoint   :     http%s://localhost:%d//ask-api/auth\n", globalConfig.ssl ? "s" : "", globalConfig.port);
+    printf("  Http Endpoint   :     http%s://localhost:%d/ask/auth\n", globalConfig.ssl ? "s" : "", globalConfig.port);
     printf("=====================================================================\n");
 }

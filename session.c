@@ -43,7 +43,7 @@ static char* generateSessionUUID()
     uuid_generate_time_safe(uuid);
     uuid_unparse_lower(uuid, uuidString);
     uuidString[strlen(uuidString)] = '\0';
-    printf("Session UUID: %s, len: %d\n", uuidString, strlen(uuidString));
+    tp_log_write(TPL_DEBUG, "generated Session UUID: %s, len: %d", uuidString, strlen(uuidString));
 
     return uuidString;
 }
@@ -53,16 +53,17 @@ Session* getSession(struct MHD_Connection* connection)
     Session* session;
     const char* cookie;
 
-    printf("\n\n\t***** check session\n");
+    tp_log_write(TPL_DEBUG, "check connection for ASKSESSION cookie\n");
     /* search for an existing session for this connection */
     if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
-        printf("\t***** cookie: %s\n", cookie);
+        tp_log_write(TPL_DEBUG, "checking sessions for ASKSESSION %s", cookie);
         session = sessions;
         while (session != NULL) {
             if (strcmp(cookie, session->id) == 0) break;
             session = session->next;
         }
         if (session != NULL) {
+            tp_log_write(TPL_INFO, "an active session exists for ASKSESSION %s", cookie);
             session->rc++;
             return session;
         }
@@ -79,7 +80,6 @@ Session* getSession(struct MHD_Connection* connection)
     unsigned int v2 = (unsigned int)random();
     unsigned int v3 = (unsigned int)random();
     unsigned int v4 = (unsigned int)random();
-//    snprintf(session->id, sizeof(session->id), "%X%X%X%X", v1, v2, v3, v4);
     char* sessionUUID = generateSessionUUID();
     snprintf(session->id, sizeof(session->id), "%s", sessionUUID);
     free(sessionUUID);
@@ -89,6 +89,8 @@ Session* getSession(struct MHD_Connection* connection)
     /* put the new session at the head (lifo) of the sessions list */
     session->next = sessions;
     sessions = session;
+
+    tp_log_write(TPL_INFO, "session started for connection (session UUID: %s)", session->id);
 
     return session;
 }
