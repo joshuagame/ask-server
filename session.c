@@ -34,76 +34,16 @@
 #include "session.h"
 #include <uuid/uuid.h>
 
-
-//char *MD5Hash(const char *str, int length) {
-//    int n;
-//    MD5_CTX c;
-//    unsigned char digest[16];
-//    char *out = (char*)malloc(33);
-//
-//    MD5_Init(&c);
-//
-//    while (length > 0) {
-//        if (length > 512) {
-//            MD5_Update(&c, str, 512);
-//        } else {
-//            MD5_Update(&c, str, length);
-//        }
-//        length -= 512;
-//        str += 512;
-//    }
-//
-//    MD5_Final(digest, &c);
-//
-//    for (n = 0; n < 16; ++n) {
-//        snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
-//    }
-//
-//    return out;
-//}
-
-//static char* MD5hash(const char* str, int length)
-//{
-//    unsigned char digest[16];
-//
-//    printf("string length: %d\n", strlen(str));
-//
-//    MD5_CTX ctx;
-//    MD5_Init(&ctx);
-//    MD5_Update(&ctx, str, strlen(str));
-//    MD5_Final(digest, &ctx);
-//
-//    //char mdString[33];
-//    char* md5String = malloc(33);
-//    for (int i = 0; i < 16; i++)
-//        sprintf(&md5String[i*2], "%02x", (unsigned int)digest[i]);
-//
-//    printf("md5 digest: %s\n", md5String);
-//    return md5String;
-//}
-//
-//static void generateSessionId(char** md5String)
-//{
-//    char* sessionId;
-//    unsigned int v1 = (unsigned int)random();
-//    unsigned int v2 = (unsigned int)random();
-//    unsigned int v3 = (unsigned int)random();
-//    unsigned int v4 = (unsigned int)random();
-//    snprintf(sessionId, sizeof(sessionId), "%X%X%X%X", v1, v2, v3, v4);
-//
-//    *md5String = MD5hash(sessionId, sizeof(sessionId));
-//    free(sessionId);
-//}
-
 static char* generateSessionUUID()
 {
     uuid_t uuid;
     char* uuidString = malloc(37);
 
-    uuid_generate_time(uuid);
-    //uuid_generate_time_safe(uuid);
+//    uuid_generate_time(uuid);
+    uuid_generate_time_safe(uuid);
     uuid_unparse_lower(uuid, uuidString);
-    printf("Session UUID: %s\n", uuidString);
+    uuidString[strlen(uuidString)] = '\0';
+    printf("Session UUID: %s, len: %d\n", uuidString, strlen(uuidString));
 
     return uuidString;
 }
@@ -113,8 +53,10 @@ Session* getSession(struct MHD_Connection* connection)
     Session* session;
     const char* cookie;
 
+    printf("\n\n\t***** check session\n");
     /* search for an existing session for this connection */
     if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
+        printf("\t***** cookie: %s\n", cookie);
         session = sessions;
         while (session != NULL) {
             if (strcmp(cookie, session->id) == 0) break;
@@ -153,8 +95,21 @@ Session* getSession(struct MHD_Connection* connection)
 
 void addSessionCookie(Session* session, Response* response)
 {
+    time_t rawtime;
+    struct tm expirationTime;
+    char expirationTimeBuffer[80];
+
+    time(&rawtime);
+    expirationTime = *localtime(&rawtime);
+    expirationTime.tm_sec += 3600;
+    mktime(&expirationTime);
+
+    // DAY, DD-MMM-YYYY HH:MM:SS GMT
+    // Sat, 01-Jan-2000 00:00:00 GMT
+    strftime(expirationTimeBuffer, 80, "%a, %d-%b-%Y %X GMT", &expirationTime);
+
     char buffer[256];
-    snprintf(buffer, sizeof(buffer), "%s=%s", ASK_COOKIE_NAME, session->id);
+    snprintf(buffer, sizeof(buffer), "%s=%s;expires=%s;path=/", ASK_COOKIE_NAME, session->id, expirationTimeBuffer);
     if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
         perror("Unable to set session cookie header.\n");
     }

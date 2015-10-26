@@ -115,7 +115,7 @@ struct FormCredentials {
 
 typedef struct Session {
     struct Session* next;
-    char id[33];
+    char id[37];
     unsigned int rc;
     time_t start;
     struct FormCredentials fcred;

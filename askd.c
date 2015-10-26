@@ -35,7 +35,6 @@
 #define _GNU_SOURCE         /*!< this is for asprintf() */
 
 #include "ask.h"
-#include <curl/curl.h>
 
 static void startServer();
 
