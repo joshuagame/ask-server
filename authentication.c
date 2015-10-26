@@ -62,9 +62,9 @@ static unsigned int extractAuthenticationData(const char* authenticationHeaderVa
     unsigned int i = 0;
     char *line = strdup(authenticationHeaderValue);
     char *basic = strtok(line, " ");
-    tp_log_write(TPL_DEBUG, "basic: %s\n", basic);
+    log(TPL_DEBUG, "basic: %s\n", basic);
     char *data = strtok(NULL, " ");
-    tp_log_write(TPL_DEBUG, "data: %s\n", data);
+    log(TPL_DEBUG, "data: %s\n", data);
 
     *authenticationData = data;
 
@@ -81,7 +81,7 @@ static int basicAuthentication(Connection* connection)
     Session* session;
 
     authorizationHeaderValue = getHeaderValue(connection, MHD_HTTP_HEADER_AUTHORIZATION);
-    tp_log_write(TPL_DEBUG,"authorizationHeaderValue: %s\n", authorizationHeaderValue);
+    log(TPL_DEBUG,"authorizationHeaderValue: %s\n", authorizationHeaderValue);
 
 
     /* no Basic info at all */
@@ -97,7 +97,7 @@ static int basicAuthentication(Connection* connection)
     /* extract the authentication data from Authorization header */
     char* authenticationData;
     extractAuthenticationData(authorizationHeaderValue, &authenticationData);
-    tp_log_write(TPL_DEBUG,"\nAuthentication Data: %s\n", authenticationData);
+    log(TPL_DEBUG,"\nAuthentication Data: %s\n", authenticationData);
 
     /* decode the authentication data */
     char* base64DecodeOutput;
@@ -107,7 +107,7 @@ static int basicAuthentication(Connection* connection)
     /* extract the username */
     char* username;
     size_t ulen = extractUsername(base64DecodeOutput, &username);
-    tp_log_write(TPL_DEBUG, "username: %s\n", username);
+    log(TPL_DEBUG, "username: %s\n", username);
 
     if (username == NULL) {
         return 0;
@@ -142,10 +142,10 @@ static int formBasedAuthentication(Connection* connection, Session* session)
 int authenticate(Connection* connection, Session* session)
 {
     char* sessionCookieValue;
-    tp_log_write(TPL_INFO, "Authenticating");
+    log(TPL_INFO, "Authenticating");
     /* if we found the ASKSESSION cookie, the user is authenticated */
     if ((sessionCookieValue = getSessionCookie(connection)) != NULL) {
-        tp_log_write(TPL_DEBUG, "session [%s] found", sessionCookieValue);
+        log(TPL_DEBUG, "session [%s] found", sessionCookieValue);
         return AUTHENTICATED;
     }
 
@@ -154,11 +154,11 @@ int authenticate(Connection* connection, Session* session)
      * here we first try for Basic Authentication and if there are no Basic Auth info, then we check for
      * FORM-Based username and password (here we had username and password in session because of the post iterator)
      */
-    tp_log_write(TPL_DEBUG, "calling basicAuthentication()");
+    log(TPL_DEBUG, "calling basicAuthentication()");
     int auth = basicAuthentication(connection);
-    tp_log_write(TPL_DEBUG, "returned auth: %d\n", auth);
+    log(TPL_DEBUG, "returned auth: %d\n", auth);
     if (auth == NO_BASIC_AUTH_INFO) {
-        tp_log_write(TPL_DEBUG, "NO_BASIC_AUTH_INFO\n");
+        log(TPL_DEBUG, "NO_BASIC_AUTH_INFO\n");
         auth = formBasedAuthentication(connection, session);
     }
 

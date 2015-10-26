@@ -156,6 +156,7 @@ void configure(int argc, char *const *argv);
 /* session.c */
 Session* getSession(struct MHD_Connection* connection);
 void addSessionCookie(Session* session, Response* response);
+void addExpiredCookie(Response* response);
 const char* getSessionCookie(Connection* connection);
 void setSessionUsername(Session* session, size_t size, uint64_t offset, const char* data);
 void setSessionPassword(Session* session, size_t size, uint64_t offset, const char* data);
@@ -177,8 +178,8 @@ int authenticate(Connection* connection, Session* session);
 int httpBasicAuthentication(const char* username, const char* basicAuth);
 
 /* log.c */
-void tp_log_init(int mode, int level, int fd);
-void tp_log_write(int level, const char *fmt, ...);
-void tp_log_close(void);
+void logInit(int mode, int level, int fd);
+void log(int level, const char *fmt, ...);
+void logDispose(void);
 
 #endif //ASK_SERVER_ASK_H

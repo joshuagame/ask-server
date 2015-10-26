@@ -50,9 +50,9 @@ int httpBasicAuthentication(const char* username, const char* basicAuth)
     CURLcode res;
     int result = 1;
 
-    tp_log_write(TPL_DEBUG, "---------------------------------------------------------------");
-    tp_log_write(TPL_DEBUG, "performing Zimbra authentication http request:");
-    tp_log_write(TPL_DEBUG, "url: %s\n", url);
+    log(TPL_DEBUG, "---------------------------------------------------------------");
+    log(TPL_DEBUG, "performing Zimbra authentication http request:");
+    log(TPL_DEBUG, "url: %s", url);
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
@@ -64,7 +64,7 @@ int httpBasicAuthentication(const char* username, const char* basicAuth)
         char* authorizationHeader;
         authorizationHeader = malloc(len);
         snprintf(authorizationHeader, len, "Authorization: %s", basicAuth);
-        tp_log_write(TPL_DEBUG, "%s\n", authorizationHeader);
+        log(TPL_DEBUG, "%s", authorizationHeader);
 
         chunk = curl_slist_append(chunk, authorizationHeader);
 
@@ -78,12 +78,12 @@ int httpBasicAuthentication(const char* username, const char* basicAuth)
         res = curl_easy_perform(curl);
         /* Check for errors */
         if(res != CURLE_OK)
-            tp_log_write(TPL_ERR, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            log(TPL_ERR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
 
         /* and get HTTP response code */
         long httpCode = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-        tp_log_write(TPL_DEBUG, "Zimbra authentication result code: %d\n", httpCode);
+        log(TPL_DEBUG, "Zimbra authentication result code: %d", httpCode);
         result = httpCode == 200 && res != CURLE_ABORTED_BY_CALLBACK ? AUTHENTICATED : NOT_AUTHENTICATED;
 
         /* always cleanup */
@@ -91,7 +91,7 @@ int httpBasicAuthentication(const char* username, const char* basicAuth)
     }
 
     curl_global_cleanup();
-    tp_log_write(TPL_DEBUG, "---------------------------------------------------------------");
+    log(TPL_DEBUG, "---------------------------------------------------------------");
 
     return result;
 }

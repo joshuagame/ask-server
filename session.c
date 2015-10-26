@@ -39,11 +39,14 @@ static char* generateSessionUUID()
     uuid_t uuid;
     char* uuidString = malloc(37);
 
-//    uuid_generate_time(uuid);
+#ifdef __APPLE__
+    uuid_generate_time(uuid);
+#else
     uuid_generate_time_safe(uuid);
+#endif
     uuid_unparse_lower(uuid, uuidString);
     uuidString[strlen(uuidString)] = '\0';
-    tp_log_write(TPL_DEBUG, "generated Session UUID: %s, len: %d", uuidString, strlen(uuidString));
+    log(TPL_DEBUG, "generated Session UUID: %s, len: %d", uuidString, strlen(uuidString));
 
     return uuidString;
 }
@@ -53,18 +56,28 @@ Session* getSession(struct MHD_Connection* connection)
     Session* session;
     const char* cookie;
 
+    /*
+     * Checking for session id from session cookie:
+     *   - if here we have a session cookie, grab the session id and check for it in the active sessions list
+     *   -    if we cannot find session id in the list than here we have an expired session => askForAuth
+     *   -    if we found the session id in the list we have an authenticated session
+     *   - if we have NO session cookie here than generate a new session id
+     */
     /* search for an existing session for this connection */
     if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
-        tp_log_write(TPL_DEBUG, "checking sessions for ASKSESSION %s", cookie);
+        log(TPL_DEBUG, "checking sessions for ASKSESSION %s", cookie);
         session = sessions;
         while (session != NULL) {
             if (strcmp(cookie, session->id) == 0) break;
             session = session->next;
         }
         if (session != NULL) {
-            tp_log_write(TPL_INFO, "an active session exists for ASKSESSION %s", cookie);
+            log(TPL_INFO, "an active session exists for ASKSESSION %s", cookie);
             session->rc++;
             return session;
+        } else {
+            // returning a NULL session the caller will have to ask for a new authentication from the client
+            return (Session*)NULL;
         }
     }
 
@@ -89,7 +102,7 @@ Session* getSession(struct MHD_Connection* connection)
     session->next = sessions;
     sessions = session;
 
-    tp_log_write(TPL_INFO, "session started for connection (session UUID: %s)", session->id);
+    log(TPL_INFO, "session started for connection (session UUID: %s)", session->id);
 
     return session;
 }
@@ -111,6 +124,15 @@ void addSessionCookie(Session* session, Response* response)
 
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%s=%s;expires=%s;path=/", ASK_COOKIE_NAME, session->id, expirationTimeBuffer);
+    if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
+        perror("Unable to set session cookie header.\n");
+    }
+}
+
+void addExpiredCookie(Response* response)
+{
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), "%s=deleted;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT", ASK_COOKIE_NAME);
     if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
         perror("Unable to set session cookie header.\n");
     }

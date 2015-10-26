@@ -59,8 +59,8 @@ void configure(int argc, char *const *argv)
 
     globalConfig.name = argv[0];
 
-    tp_log_write(TPL_INFO, "ASK server (%s) initialization", globalConfig.name);
-    tp_log_write(TPL_INFO, "loading configuration from %s", configFileName);
+    log(TPL_INFO, "ASK server (%s) initialization", globalConfig.name);
+    log(TPL_INFO, "loading configuration from %s", configFileName);
 //    printf("\n>> ASK server (%s) initialization\n", globalConfig.name);
 //    printf(">> Loading configuration fr    om %s\n", configFileName);
 
@@ -95,10 +95,10 @@ void configure(int argc, char *const *argv)
 
     /* load configuration from file */
     loadConfiguration();
-    tp_log_write(TPL_INFO, "version: %s", ASK_VERSION);
-    tp_log_write(TPL_INFO, "listening port: %d", globalConfig.port);
-    tp_log_write(TPL_INFO, "SSL: %s", globalConfig.ssl ? "enabled" : "disabled");
-    tp_log_write(TPL_INFO, "Http Endpoint: http%s://localhost:%d/ask/auth", globalConfig.ssl ? "s" : "", globalConfig.port);
+    log(TPL_INFO, "version: %s", ASK_VERSION);
+    log(TPL_INFO, "listening port: %d", globalConfig.port);
+    log(TPL_INFO, "SSL: %s", globalConfig.ssl ? "enabled" : "disabled");
+    log(TPL_INFO, "Http Endpoint: http%s://localhost:%d/ask/auth", globalConfig.ssl ? "s" : "", globalConfig.port);
     printConfiguration();
 }
 

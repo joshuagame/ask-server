@@ -14,7 +14,7 @@
 #include <errno.h>
 
 /* function from pio.c I use */
-ssize_t tp_write(int fd, const void *buf, size_t len)
+ssize_t logWrite(int fd, const void *buf, size_t len)
 {
     ssize_t ret, wlen = 0;
     const char *ptr;
@@ -51,7 +51,7 @@ static const int level_syslog[] = {
         LOG_DEBUG, LOG_INFO, LOG_ERR, LOG_EMERG
 };
 
-void tp_log_init(int mode, int level, int fd)
+void logInit(int mode, int level, int fd)
 {
     assert(mode == TPLM_SYSLOG || mode == TPLM_FILE);
     assert(mode == TPLM_FILE ? fd >= 0 : 1);
@@ -74,7 +74,7 @@ void tp_log_init(int mode, int level, int fd)
 #define MAX_MSG_LEN 1024
 #define MAX_POSTFIX_LEN 2
 
-static void tp_vlog_write(int level, const char *fmt, va_list alist)
+static void vlog(int level, const char *fmt, va_list alist)
 {
     int ret, len;
     time_t t;
@@ -107,7 +107,7 @@ static void tp_vlog_write(int level, const char *fmt, va_list alist)
                 len += ret;
 
             snprintf(msg+len, MAX_POSTFIX_LEN, "\n");
-            tp_write(log_fd, msg, len+1);
+            logWrite(log_fd, msg, len+1);
             break;
 
         case TPLM_SYSLOG:
@@ -121,16 +121,16 @@ static void tp_vlog_write(int level, const char *fmt, va_list alist)
     }
 }
 
-void tp_log_write(int level, const char *fmt, ...)
+void log(int level, const char *fmt, ...)
 {
     va_list vl;
 
     va_start(vl, fmt);
-    tp_vlog_write(level, fmt, vl);
+    vlog(level, fmt, vl);
     va_end(vl);
 }
 
-void tp_log_close(void)
+void logDispose(void)
 {
     assert(log_fd);
 

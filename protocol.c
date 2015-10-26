@@ -43,16 +43,16 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
     const char* header;
 
     if ((header = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE)) != NULL) {
-//        tp_log_write(TPL_DEBUG, "Request Content-Type: %s", header);
+//        log(TPL_DEBUG, "Request Content-Type: %s", header);
     }
 
     if ((header = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, MHD_HTTP_HEADER_CONNECTION)) != NULL) {
-//        tp_log_write(TPL_DEBUG, "Request Connection: %s", header);
+//        log(TPL_DEBUG, "Request Connection: %s", header);
     }
 
     if ((request = *ptr) == NULL) {
         if ((request = calloc(1, sizeof(Request))) == NULL) {
-            tp_log_write(TPL_ERR, "unable to alloc request structure\n");
+            log(TPL_ERR, "unable to alloc request structure\n");
             return MHD_NO;
         }
         *ptr = request;
@@ -60,7 +60,7 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
         if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
             request->postProcessor = MHD_create_post_processor(connection, 1024, &postParamsIterator, request);
             if (request->postProcessor == NULL) {
-                tp_log_write(TPL_ERR, "Failed to setup post processor for '%s'\n", url);
+                log(TPL_ERR, "Failed to setup post processor for '%s'\n", url);
                 return MHD_NO;
             }
         }
@@ -71,29 +71,32 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
     if (request->session == NULL) {
         request->session = getSession(connection);
         if (request->session == NULL) {
-            tp_log_write(TPL_ERR, "unable to set up session for '%s'\n", url);
-            return MHD_NO;
+//            log(TPL_ERR, "unable to set up session for '%s'\n", url);
+//            return MHD_NO;
+            // if getSession() returned a NULL sessions, it means that the sessionId in the session cookie
+            // is expired, so... ask for a new authentication
+            return askForAuthentication(connection, ASK_REALM);
         }
     }
 
     Session* session = request->session;
     session->start = time(NULL);
     if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
-        tp_log_write(TPL_DEBUG, "POST method\n");
+        log(TPL_DEBUG, "POST method\n");
 
         /* eval request post data */
         MHD_post_process(request->postProcessor, uploadData, *uploadDataSize);
-        tp_log_write(TPL_DEBUG,"POST data processed\n");
+        log(TPL_DEBUG,"POST data processed\n");
 
 
         if (*uploadDataSize != 0) {
-            tp_log_write(TPL_DEBUG,"upload data size = 0\n");
+            log(TPL_DEBUG,"upload data size = 0\n");
             *uploadDataSize = 0;
             return MHD_YES;
         }
 
         /* Ok, here we have done with POST data, now we can serve the response */
-        tp_log_write(TPL_DEBUG,"serving response to client\n");
+        log(TPL_DEBUG,"serving response to client\n");
         MHD_destroy_post_processor(request->postProcessor);
         request->postProcessor = NULL;
 
@@ -113,7 +116,7 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
 
         result = routes[i].handler(routes[i].handlerCls, routes[i].mime, session, connection);
         if (result != MHD_YES) {
-            tp_log_write(TPL_ERR,"Error handling route to '%s'\n", url);
+            log(TPL_ERR,"Error handling route to '%s'\n", url);
         }
 
         return result;
@@ -203,7 +206,7 @@ static int basicAuthHandler(const void* cls, const char* mime, Session* session,
     Response* response;
 
     if (authenticate(connection, session) == AUTHENTICATED) {
-        tp_log_write(TPL_INFO, "user authenticated");
+        log(TPL_INFO, "user authenticated");
         if (asprintf(&reply, "AUTHENTICATED") == -1) {
             /* TODO: check which error is better. Internal Server Error */
             return MHD_NO;
@@ -240,14 +243,14 @@ static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* ke
     /* get the form param j_username */
     if (strcmp(J_USERNAME, key) == 0) {
         setSessionUsername(session, size, off, data);
-        tp_log_write(TPL_DEBUG, "j_username: '\%s'", getSessionUsername(session));
+        log(TPL_DEBUG, "j_username: '\%s'", getSessionUsername(session));
         return MHD_YES;
     }
 
     /* get the form param j_password */
     if (strcmp(J_PASSWORD, key) == 0) {
         setSessionPassword(session, size, off, data);
-        tp_log_write(TPL_DEBUG,"j_password: '\%s'", getSessionPassword(session));
+        log(TPL_DEBUG,"j_password: '\%s'", getSessionPassword(session));
         return MHD_YES;
     }
 
@@ -280,6 +283,9 @@ static int askForAuthentication(Connection* connection, const char* realm)
     /* add the "WWW-Authenticate" header to the response */
     result = addResponseHeader(response, MHD_HTTP_HEADER_WWW_AUTHENTICATE, headerValue);
     free(headerValue);
+
+    /* add an expired session cookie, to prevent resending cookie for expired sessions */
+    addExpiredCookie(response);
 
     if (!result) {
         MHD_destroy_response(response);
