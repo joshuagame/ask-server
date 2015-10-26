@@ -53,7 +53,6 @@ Session* getSession(struct MHD_Connection* connection)
     Session* session;
     const char* cookie;
 
-    tp_log_write(TPL_DEBUG, "check connection for ASKSESSION cookie\n");
     /* search for an existing session for this connection */
     if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
         tp_log_write(TPL_DEBUG, "checking sessions for ASKSESSION %s", cookie);
