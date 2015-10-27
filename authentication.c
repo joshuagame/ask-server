@@ -81,7 +81,7 @@ static int basicAuthentication(Connection* connection)
     Session* session;
 
     authorizationHeaderValue = getHeaderValue(connection, MHD_HTTP_HEADER_AUTHORIZATION);
-    log(TPL_DEBUG,"authorizationHeaderValue: %s\n", authorizationHeaderValue);
+    log(TPL_DEBUG,"Authorization header: %s", authorizationHeaderValue);
 
 
     /* no Basic info at all */
@@ -97,7 +97,6 @@ static int basicAuthentication(Connection* connection)
     /* extract the authentication data from Authorization header */
     char* authenticationData;
     extractAuthenticationData(authorizationHeaderValue, &authenticationData);
-    log(TPL_DEBUG,"\nAuthentication Data: %s\n", authenticationData);
 
     /* decode the authentication data */
     char* base64DecodeOutput;
@@ -107,7 +106,7 @@ static int basicAuthentication(Connection* connection)
     /* extract the username */
     char* username;
     size_t ulen = extractUsername(base64DecodeOutput, &username);
-    log(TPL_DEBUG, "username: %s\n", username);
+    log(TPL_DEBUG, "username: %s", username);
 
     if (username == NULL) {
         return 0;
@@ -115,12 +114,7 @@ static int basicAuthentication(Connection* connection)
 
     /* performs Zimbra authentication */
     authenticated =  httpBasicAuthentication(username, authorizationHeaderValue);
-
-    //free(username);
-    //free(authenticationData);
-
     return authenticated;
-
 }
 
 static int formBasedAuthentication(Connection* connection, Session* session)
@@ -142,7 +136,7 @@ static int formBasedAuthentication(Connection* connection, Session* session)
 int authenticate(Connection* connection, Session* session)
 {
     char* sessionCookieValue;
-    log(TPL_INFO, "Authenticating");
+
     /* if we found the ASKSESSION cookie, the user is authenticated */
     if ((sessionCookieValue = getSessionCookie(connection)) != NULL) {
         log(TPL_DEBUG, "session [%s] found", sessionCookieValue);
@@ -152,13 +146,11 @@ int authenticate(Connection* connection, Session* session)
     /*
      * if no cookie has been found, check for authentication credentials:
      * here we first try for Basic Authentication and if there are no Basic Auth info, then we check for
-     * FORM-Based username and password (here we had username and password in session because of the post iterator)
+     * FORM-Based username and password (here we have username and password in session because of the post iterator)
      */
-    log(TPL_DEBUG, "calling basicAuthentication()");
+    log(TPL_INFO, "Authenticating");
     int auth = basicAuthentication(connection);
-    log(TPL_DEBUG, "returned auth: %d\n", auth);
     if (auth == NO_BASIC_AUTH_INFO) {
-        log(TPL_DEBUG, "NO_BASIC_AUTH_INFO\n");
         auth = formBasedAuthentication(connection, session);
     }
 
