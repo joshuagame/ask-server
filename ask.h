@@ -61,10 +61,10 @@
 #endif
 
 #define ASK_REALM "\"ask\""
-#define TEST_USER "test"
-#define TEST_PASSWORD "password"
-
 #define ASK_COOKIE_NAME "ASKSESSION"
+#define AUTHENTICATED MHD_YES
+#define NOT_AUTHENTICATED MHD_NO
+#define NO_BASIC_AUTH_INFO 0x100
 
 /* html pages */
 #define HOME_PAGE "<html><head><title>ASK Server</title></head>"\
@@ -77,11 +77,6 @@
                     "<body>Illegal request.</body></html>"
 #define ERROR_NOT_FOUND_PAGE "<html><head><title>ASK Server</title></head>"\
                     "<body>Not found.</body></html>"
-
-#define AUTHENTICATED MHD_YES
-#define NOT_AUTHENTICATED MHD_NO
-#define NO_BASIC_AUTH_INFO 0x100
-
 
 /** configuration */
 

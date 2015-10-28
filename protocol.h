@@ -36,6 +36,8 @@
 
 #include "ask.h"
 
+const char* resAuthOk = "{ \"status\": \"success\", \"message\": \"user authenticated\" }";
+
 /** routes */
 typedef int (*RouteHandler)(const void* cls, const char* mime, Session* session, Connection* connection);
 
@@ -58,12 +60,13 @@ static int notFoundHandler(const void* cls, const char* mime, Session* session, 
 static int basicAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection);
 static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection);
 static int askForAuthentication(Connection* connection, const char* realm);
+static int sendAuthenticationResponse(Connection* connection, Session* session, char* body, const char* mime);
 
 /* Ask Server Routes */
 static Route routes[] = {
         {"/", "text/html", &homeHandler, HOME_PAGE, false},
         {"/ask", "text/html", &homeHandler, API_HOME_PAGE, false},
-        {"/ask/auth", "text/plain; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
+        {"/ask/auth", "application/json; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
         {"/ask/auth", "text/plain; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
         {"/ask/login", NULL, &homeHandler, API_HOME_PAGE, false},
         {NULL, NULL, &notFoundHandler, NULL}

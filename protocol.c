@@ -33,12 +33,10 @@
 
 #include "protocol.h"
 #include "session.h"
-#include "ask.h"
 
 int requestHandler(void* cls, Connection* connection, const char* url, const char* method,
                    const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr)
 {
-    log(TPL_ERR, ">>>> handling request");
     Response* response;
     Request* request;
     int result;
@@ -71,19 +69,24 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
     }
 
     if (request->session == NULL) {
-        log(TPL_ERR, ">>>> request has no session. getSession()");
         request->session = getSession(connection);
         if (request->session == NULL) {
             log(TPL_ERR, "unable to set up session for '%s'\n", url);
             return MHD_NO;
         } else if (request->session->state == EXPIRED) {
             // is expired (or simply not present), so... ask for a new authentication
-            log(TPL_ERR, ">>>> no ACTIVE session for session id => ask for authentication");
+            log(TPL_ERR, "session expired or null");
             return askForAuthentication(connection, ASK_REALM);
+        } else if (request->session->state == ACTIVE) {
+            // OK, here we go with an authenticated active session
+            char* body;
+            if (asprintf(&body, resAuthOk) == -1) {
+                return MHD_NO;
+            }
+            return sendAuthenticationResponse(connection, request->session, body, "application/json; charset=utf-8");
         }
     }
 
-    log(TPL_ERR, ">>>> go on handling request");
     Session* session = request->session;
     session->start = time(NULL);
     if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
@@ -208,8 +211,7 @@ static int notFoundHandler(const void* cls, const char* mime, Session* session, 
 static int basicAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection)
 {
     int result;
-    char* reply;
-    Response* response;
+//    Response* response;
 
     if (authenticate(connection, session) == AUTHENTICATED) {
         log(TPL_INFO, "user authenticated");
@@ -220,47 +222,46 @@ static int basicAuthHandler(const void* cls, const char* mime, Session* session,
 //        free(sessionUUID);
         session->rc++;
         session->start = time(NULL);
-        log(TPL_INFO, "SessionID: %s", session->id);
+        session->state = ACTIVE;
+        log(TPL_INFO, "SessionID: %s - State: %d", session->id, session->state);
 
         /* put the new session at the head (lifo) of the sessions list */
         session->next = sessions;
         sessions = session;
 
-        /* finally, activate the session */
-        session->state == ACTIVE;
-
-        if (asprintf(&reply, "AUTHENTICATED") == -1) {
+        char* body;
+        if (asprintf(&body, resAuthOk) == -1) {
             /* TODO: check which error is better. Internal Server Error */
             return MHD_NO;
         }
+
+        result = sendAuthenticationResponse(connection, session, body, mime);
     } else {
         /* user not authenticated or auth credentials not present... ask the client to perform authentication */
-        return askForAuthentication(connection, ASK_REALM);
+        result = askForAuthentication(connection, ASK_REALM);
     }
-
-    /* create the response, then add session cookie and Content-Type */
-    response = MHD_create_response_from_buffer(strlen(reply), (void*)reply, MHD_RESPMEM_MUST_FREE);
-    addSessionCookie(session, response);
-    addResponseHeader(response, MHD_HTTP_HEADER_CONTENT_TYPE, mime);
-
-    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
-    MHD_destroy_response(response);
 
     return result;
 }
 
-static int sendAuthenticationResponse()
+/* create the response, then add session cookie and Content-Type */
+static int sendAuthenticationResponse(Connection* connection, Session* session, char* body, const char* mime)
 {
-//    /* create the response, then add session cookie and Content-Type */
-//    response = MHD_create_response_from_buffer(strlen(reply), (void*)reply, MHD_RESPMEM_MUST_FREE);
-//    addSessionCookie(session, response);
-//    addResponseHeader(response, MHD_HTTP_HEADER_CONTENT_TYPE, mime);
-//
-//    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
-//    MHD_destroy_response(response);
-//
-//    return result;
-    return 0;
+    Response* response = MHD_create_response_from_buffer(strlen(body), (void*)body, MHD_RESPMEM_MUST_FREE);
+    addResponseHeader(response, MHD_HTTP_HEADER_SERVER, "ASK Server 1.0");
+
+    if (session != NULL) {
+        addSessionCookie(session, response);
+    }
+
+    if (mime != NULL) {
+        addResponseHeader(response, MHD_HTTP_HEADER_CONTENT_TYPE, mime);
+    }
+
+    int result = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    MHD_destroy_response(response);
+
+    return result;
 }
 
 static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection)

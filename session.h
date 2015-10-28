@@ -40,9 +40,4 @@
 /** sessions linked list. TODO: use an HashMap! */
 extern Session* sessions;
 
-//static char* MD5Hash(const char *str, int length);
-//static char* MD5hash(const char *str, int length);
-//static void generateSessionId(char** md5String);
-//static char* generateSessionUUID();
-
 #endif

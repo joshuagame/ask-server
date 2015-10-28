@@ -33,10 +33,6 @@
 
 #include "ask.h"
 #include "base64.h"
-#include "httpAuthClient.h"
-
-const char* testUsername = TEST_USER;
-const char* testPassword = TEST_PASSWORD;
 
 static unsigned int extractUsername(const char* basicAuth, char** username)
 {
@@ -62,27 +58,19 @@ static unsigned int extractAuthenticationData(const char* authenticationHeaderVa
     unsigned int i = 0;
     char *line = strdup(authenticationHeaderValue);
     char *basic = strtok(line, " ");
-    log(TPL_DEBUG, "basic: %s\n", basic);
     char *data = strtok(NULL, " ");
-    log(TPL_DEBUG, "data: %s\n", data);
-
     *authenticationData = data;
-
     return i;
 }
 
 static int basicAuthentication(Connection* connection)
 {
     const char* authorizationHeaderValue;
-    char* expectedB64;
-    unsigned char* expected;
     const char* basicPrefix = "Basic ";
     int authenticated;
-    Session* session;
 
     authorizationHeaderValue = getHeaderValue(connection, MHD_HTTP_HEADER_AUTHORIZATION);
     log(TPL_DEBUG,"Authorization header: %s", authorizationHeaderValue);
-
 
     /* no Basic info at all */
     if (authorizationHeaderValue == NULL) {
@@ -112,39 +100,32 @@ static int basicAuthentication(Connection* connection)
         return 0;
     }
 
-    /* performs Zimbra authentication */
+    /* perform Zimbra authentication */
     authenticated =  httpBasicAuthentication(username, authorizationHeaderValue);
     return authenticated;
 }
 
+/* TODO: implement this!!! */
 static int formBasedAuthentication(Connection* connection, Session* session)
 {
-    const char* username = getSessionUsername(session);
-    const char* password = getSessionPassword(session);
-
-    if (strlen(username) == 0 || strlen(password) == 0) {
-        return NOT_AUTHENTICATED;
-    }
-
-    if (strcmp(username, testUsername) == 0 && strcmp(password, testPassword) == 0) {
-        return AUTHENTICATED;
-    }
+//    const char* username = getSessionUsername(session);
+//    const char* password = getSessionPassword(session);
+//
+//    if (strlen(username) == 0 || strlen(password) == 0) {
+//        return NOT_AUTHENTICATED;
+//    }
+//
+////    if (strcmp(username, testUsername) == 0 && strcmp(password, testPassword) == 0) {
+////        return AUTHENTICATED;
+////    }
 
     return NOT_AUTHENTICATED;
 }
 
 int authenticate(Connection* connection, Session* session)
 {
-//    char* sessionCookieValue;
-
-//    /* if we found the ASKSESSION cookie, the user is authenticated */
-//    if ((sessionCookieValue = getSessionCookie(connection)) != NULL) {
-//        log(TPL_DEBUG, "session [%s] found", sessionCookieValue);
-//        return AUTHENTICATED;
-//    }
-
     /*
-     * if no cookie has been found or the session has expired, so check for authentication credentials:
+     * no cookie has been found or the session has expired, so check for authentication credentials:
      * here we first try for Basic Authentication and if there are no Basic Auth info, then we check for
      * FORM-Based username and password (here we have username and password in session because of the post iterator)
      */
