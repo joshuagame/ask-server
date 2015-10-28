@@ -11,6 +11,6 @@ It is intended as a sort of simple Single Sign-On session server in a corporate.
 * FORM-based authentication
 * Session Store
     * filesystem
-    * Redis
-* Use Presence information mgmt and propagation
+    * Redis (or MongoDB)
+* Presence Management and Propagation
 * Cluster and session replication
