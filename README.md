@@ -8,7 +8,8 @@ It exposes a simple HTTP REST-like interface with few API methods: it is not a f
 HTTP endpoint with simple routes.
 It is intended as a sort of simple Single Sign-On session server in a corporate.
 
-##Roadmap
+##TODO (Roadmap)
+* daemonize the process (yep :) )
 * FORM-based authentication
 * Session Store
     * filesystem
