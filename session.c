@@ -34,18 +34,22 @@
 #include "session.h"
 #include <uuid/uuid.h>
 
-static char* generateSessionUUID()
+Session* sessions = NULL;
+
+char* generateSessionUUID()
 {
     uuid_t uuid;
-    char* uuidString = malloc(37);
+//    char* uuidString = malloc(37);
+    char uuidString[37];
 
-#ifdef __APPLE__
+//#ifdef __APPLE__
+//    uuid_generate_time(uuid);
+//#else
+//    uuid_generate_time_safe(uuid);
+//#endif
     uuid_generate_time(uuid);
-#else
-    uuid_generate_time_safe(uuid);
-#endif
-    uuid_unparse_lower(uuid, uuidString);
-    uuidString[strlen(uuidString)] = '\0';
+    uuid_unparse_lower(uuid, &uuidString);
+    uuidString[37] = '\0';
     log(TPL_DEBUG, "generated Session UUID: %s, len: %d", uuidString, strlen(uuidString));
 
     return uuidString;
@@ -53,6 +57,7 @@ static char* generateSessionUUID()
 
 Session* getSession(struct MHD_Connection* connection)
 {
+    log(TPL_ERR, ">>>> getting session");
     Session* session;
     const char* cookie;
 
@@ -64,7 +69,8 @@ Session* getSession(struct MHD_Connection* connection)
      *   - if we have NO session cookie here than generate a new session id
      */
     /* search for an existing session for this connection */
-    if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
+//    if ((cookie = MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME)) != NULL) {
+    if (cookie = getSessionCookie(connection)) {
         log(TPL_DEBUG, "checking sessions for ASKSESSION %s", cookie);
         session = sessions;
         while (session != NULL) {
@@ -72,37 +78,42 @@ Session* getSession(struct MHD_Connection* connection)
             session = session->next;
         }
         if (session != NULL) {
-            log(TPL_INFO, "an active session exists for ASKSESSION %s", cookie);
-            session->rc++;
-            return session;
-        } else {
-            // returning a NULL session the caller will have to ask for a new authentication from the client
-            return (Session*)NULL;
+            if (session->state == ACTIVE) {
+                log(TPL_INFO, "an active session exists for ASKSESSION %s", cookie);
+                session->rc++;
+                return session;
+            }
         }
+//        else {
+            // returning a NULL session the caller will have to ask for a new authentication from the client
+            log(TPL_ERR, "no ACTIVE session for cookie %s", cookie);
+            session = calloc(1, sizeof(Session));
+            session->state = EXPIRED;
+            return session;
+//        }
     }
 
+    log(TPL_ERR, ">>>> starting NEW session");
     /* create a new session */
     session = calloc(1, sizeof(Session));
+    session->state = STARTED;
     if (session == NULL) {
         perror("unable to alloc session structure for the request\n");
         return NULL;
     }
 
-    unsigned int v1 = (unsigned int)random();
-    unsigned int v2 = (unsigned int)random();
-    unsigned int v3 = (unsigned int)random();
-    unsigned int v4 = (unsigned int)random();
-    char* sessionUUID = generateSessionUUID();
-    snprintf(session->id, sizeof(session->id), "%s", sessionUUID);
-    free(sessionUUID);
-    session->rc++;
-    session->start = time(NULL);
+//    /* generate and assign Session ID */
+//    char* sessionUUID = generateSessionUUID();
+//    snprintf(session->id, sizeof(session->id), "%s", sessionUUID);
+//    free(sessionUUID);
+//    session->rc++;
+//    session->start = time(NULL);
+//
+//    /* put the new session at the head (lifo) of the sessions list */
+//    session->next = sessions;
+//    sessions = session;
 
-    /* put the new session at the head (lifo) of the sessions list */
-    session->next = sessions;
-    sessions = session;
-
-    log(TPL_INFO, "session started for connection (session UUID: %s)", session->id);
+//    log(TPL_INFO, "session started for connection (session UUID: %s)", session->id);
 
     return session;
 }

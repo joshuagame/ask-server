@@ -113,16 +113,17 @@ struct FormCredentials {
     char password[64];
 };
 
+typedef enum { STARTED, ACTIVE, EXPIRED } State;
+
 typedef struct Session {
     struct Session* next;
     char id[37];
     unsigned int rc;
     time_t start;
     struct FormCredentials fcred;
+    unsigned int seq;
+    State state;
 } Session;
-
-/** sessions linked list. TODO: use an HashMap! */
-static Session* sessions;
 
 typedef struct {
     Session* session;
@@ -154,6 +155,7 @@ enum tp_log_mode {
 void configure(int argc, char *const *argv);
 
 /* session.c */
+char* generateSessionUUID();
 Session* getSession(struct MHD_Connection* connection);
 void addSessionCookie(Session* session, Response* response);
 void addExpiredCookie(Response* response);

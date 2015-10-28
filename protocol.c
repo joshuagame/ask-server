@@ -32,11 +32,13 @@
 */
 
 #include "protocol.h"
+#include "session.h"
 #include "ask.h"
 
 int requestHandler(void* cls, Connection* connection, const char* url, const char* method,
                    const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr)
 {
+    log(TPL_ERR, ">>>> handling request");
     Response* response;
     Request* request;
     int result;
@@ -52,7 +54,7 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
 
     if ((request = *ptr) == NULL) {
         if ((request = calloc(1, sizeof(Request))) == NULL) {
-            log(TPL_ERR, "unable to alloc request structure\n");
+            log(TPL_ERR, "unable to alloc request structure");
             return MHD_NO;
         }
         *ptr = request;
@@ -60,7 +62,7 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
         if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
             request->postProcessor = MHD_create_post_processor(connection, 1024, &postParamsIterator, request);
             if (request->postProcessor == NULL) {
-                log(TPL_ERR, "Failed to setup post processor for '%s'\n", url);
+                log(TPL_ERR, "Failed to setup post processor for '%s'", url);
                 return MHD_NO;
             }
         }
@@ -69,16 +71,19 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
     }
 
     if (request->session == NULL) {
+        log(TPL_ERR, ">>>> request has no session. getSession()");
         request->session = getSession(connection);
         if (request->session == NULL) {
-//            log(TPL_ERR, "unable to set up session for '%s'\n", url);
-//            return MHD_NO;
-            // if getSession() returned a NULL sessions, it means that the sessionId in the session cookie
-            // is expired, so... ask for a new authentication
+            log(TPL_ERR, "unable to set up session for '%s'\n", url);
+            return MHD_NO;
+        } else if (request->session->state == EXPIRED) {
+            // is expired (or simply not present), so... ask for a new authentication
+            log(TPL_ERR, ">>>> no ACTIVE session for session id => ask for authentication");
             return askForAuthentication(connection, ASK_REALM);
         }
     }
 
+    log(TPL_ERR, ">>>> go on handling request");
     Session* session = request->session;
     session->start = time(NULL);
     if (strcmp(method, MHD_HTTP_METHOD_POST) == 0) {
@@ -114,6 +119,7 @@ int requestHandler(void* cls, Connection* connection, const char* url, const cha
             i++;
         }
 
+        log(TPL_ERR, ">>>> routing request to %s", routes[i].url);
         result = routes[i].handler(routes[i].handlerCls, routes[i].mime, session, connection);
         if (result != MHD_YES) {
             log(TPL_ERR,"Error handling route to '%s'\n", url);
@@ -207,6 +213,22 @@ static int basicAuthHandler(const void* cls, const char* mime, Session* session,
 
     if (authenticate(connection, session) == AUTHENTICATED) {
         log(TPL_INFO, "user authenticated");
+        log(TPL_INFO, "generate and assign Session ID");
+        /* generate and assign Session ID */
+        char* sessionUUID = generateSessionUUID();
+        snprintf(session->id, sizeof(session->id), "%s", sessionUUID);
+//        free(sessionUUID);
+        session->rc++;
+        session->start = time(NULL);
+        log(TPL_INFO, "SessionID: %s", session->id);
+
+        /* put the new session at the head (lifo) of the sessions list */
+        session->next = sessions;
+        sessions = session;
+
+        /* finally, activate the session */
+        session->state == ACTIVE;
+
         if (asprintf(&reply, "AUTHENTICATED") == -1) {
             /* TODO: check which error is better. Internal Server Error */
             return MHD_NO;
@@ -225,6 +247,20 @@ static int basicAuthHandler(const void* cls, const char* mime, Session* session,
     MHD_destroy_response(response);
 
     return result;
+}
+
+static int sendAuthenticationResponse()
+{
+//    /* create the response, then add session cookie and Content-Type */
+//    response = MHD_create_response_from_buffer(strlen(reply), (void*)reply, MHD_RESPMEM_MUST_FREE);
+//    addSessionCookie(session, response);
+//    addResponseHeader(response, MHD_HTTP_HEADER_CONTENT_TYPE, mime);
+//
+//    result = MHD_queue_response(connection, MHD_HTTP_OK, response);
+//    MHD_destroy_response(response);
+//
+//    return result;
+    return 0;
 }
 
 static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection)

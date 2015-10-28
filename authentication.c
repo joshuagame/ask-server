@@ -135,16 +135,16 @@ static int formBasedAuthentication(Connection* connection, Session* session)
 
 int authenticate(Connection* connection, Session* session)
 {
-    char* sessionCookieValue;
+//    char* sessionCookieValue;
 
-    /* if we found the ASKSESSION cookie, the user is authenticated */
-    if ((sessionCookieValue = getSessionCookie(connection)) != NULL) {
-        log(TPL_DEBUG, "session [%s] found", sessionCookieValue);
-        return AUTHENTICATED;
-    }
+//    /* if we found the ASKSESSION cookie, the user is authenticated */
+//    if ((sessionCookieValue = getSessionCookie(connection)) != NULL) {
+//        log(TPL_DEBUG, "session [%s] found", sessionCookieValue);
+//        return AUTHENTICATED;
+//    }
 
     /*
-     * if no cookie has been found, check for authentication credentials:
+     * if no cookie has been found or the session has expired, so check for authentication credentials:
      * here we first try for Basic Authentication and if there are no Basic Auth info, then we check for
      * FORM-Based username and password (here we have username and password in session because of the post iterator)
      */
