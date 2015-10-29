@@ -79,13 +79,13 @@ static int basic_authentication(connection_t* connection)
         }
 
         /* extract the authentication data from Authorization header */
-        char* authenticationData;
-        extract_authentication_data(authentication_header_value, &authenticationData);
+        char* authentication_data;
+        extract_authentication_data(authentication_header_value, &authentication_data);
 
         /* decode the authentication data */
         char* base64_decoded_output;
-        size_t decodedSize = 0;
-        Base64Decode(authenticationData, &base64_decoded_output, &decodedSize);
+        size_t decoded_size = 0;
+        Base64Decode(authentication_data, &base64_decoded_output, &decoded_size);
 
         /* extract the username */
         char* username;

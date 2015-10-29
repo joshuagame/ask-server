@@ -32,9 +32,13 @@
 
 session_t* sessions = NULL;
 
+/*
+ * Generate randomly a (not so secure) UUID for the session using libuuid.
+ */
 char* generate_session_id()
 {
         uuid_t uuid;
+        /* TODO: maybe is better a char* because uuid_unparse_lower() expects a one */
         char session_id[37];
 
         uuid_generate_time(uuid);
@@ -45,6 +49,10 @@ char* generate_session_id()
         return session_id;
 }
 
+/*
+ * Returns the session for the actual connection. The session could by the active session for the actual connection
+ * or a newly created.
+ */
 session_t* get_session(struct MHD_Connection* connection)
 {
         session_t* session;
@@ -52,10 +60,9 @@ session_t* get_session(struct MHD_Connection* connection)
 
         /*
          * Checking for session id from session cookie:
-         *   - if here we have a session cookie, grab the session id and check for it in the active sessions list
-         *   -    if we cannot find session id in the list than here we have an expired session => askForAuth
-         *   -    if we found the session id in the list we have an authenticated session
-         *   - if we have NO session cookie here than generate a new session id
+         *   1- if here we have a session cookie, grab the session id and check for it in the active sessions hash table
+         *      -    if we cannot find session id in the hash table then here we have an expired session => askForAuth
+         *      -    if we found the session id in the hash table we have an authenticated session
          */
         if (cookie = get_session_cookie(connection)) {
                 asklog(TPL_DEBUG, "checking sessions for ASKSESSION %s", cookie);
@@ -68,7 +75,7 @@ session_t* get_session(struct MHD_Connection* connection)
                         }
                 }
 
-                // returning a NULL session the caller will have to ask for a new authentication from the client
+                // returning an EXPIRED session the caller will have to ask for a new authentication from the client
                 asklog(TPL_ERR, "no ACTIVE session for cookie %s", cookie);
                 session = calloc(1, sizeof(session_t));
                 session->state = EXPIRED;
@@ -76,7 +83,7 @@ session_t* get_session(struct MHD_Connection* connection)
 
         }
 
-        /* create a new session */
+        /* 2- if we have NO session cookie here then generate a new session */
         session = calloc(1, sizeof(session_t));
         session->state = STARTED;
         time_t now;
@@ -91,7 +98,9 @@ session_t* get_session(struct MHD_Connection* connection)
         return session;
 }
 
-/* TODO: set expires attribute starting from session->expire time */
+/*
+ * Set the session cookie in the Set-Cookie header
+ */
 void add_session_cookie(session_t* session, response_t* response)
 {
         time_t rawtime = session->expiration;
@@ -111,6 +120,10 @@ void add_session_cookie(session_t* session, response_t* response)
         }
 }
 
+/*
+ * Set the session cookie in the Set-Cookie header with expires value set to "Thu, 01 Jan 1970 00:00:00 GMT".
+ * This way we can force the client to remove the cookie.
+ */
 void add_expired_cookie(response_t* response)
 {
         char buffer[256];
@@ -125,7 +138,6 @@ const char* get_session_cookie(connection_t* connection)
         return MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME);
 }
 
-/* TODO: try and unify the following into one function */
 void set_session_username(session_t* session, size_t size, uint64_t offset, const char* data)
 {
         if (size + offset > sizeof(session->fcred.username)) {
