@@ -34,37 +34,37 @@
 #include "httpAuthClient.h"
 #include <curl/curl.h>
 
-static char *auth_url(const char *username)
+static char* auth_url(const char* username)
 {
 //    const char* proto = globalConfig.http_auth_ssl ? "https://" : "http://";
-        char *url = malloc(strlen(global_config.http_auth_url) + strlen(username) - 1);
+        char* url = malloc(strlen(global_config.http_auth_url) + strlen(username) - 1);
         sprintf(url, global_config.http_auth_url, username);
 
         return url;
 }
 
-int httpBasicAuthentication(const char *username, const char *basicAuth)
+int http_basic_authentication(const char* username, const char* basicAuth)
 {
-        char *url = auth_url(username);
-        CURL *curl;
+        char* url = auth_url(username);
+        CURL* curl;
         CURLcode res;
         int result = 1;
 
-        log(TPL_DEBUG, "---------------------------------------------------------------");
-        log(TPL_DEBUG, "performing Zimbra authentication http request:");
-        log(TPL_DEBUG, "url: %s", url);
+        asklog(TPL_DEBUG, "---------------------------------------------------------------");
+        asklog(TPL_DEBUG, "performing Zimbra authentication http request:");
+        asklog(TPL_DEBUG, "url: %s", url);
 
         curl_global_init(CURL_GLOBAL_DEFAULT);
         curl = curl_easy_init();
 
         if (curl) {
-                struct curl_slist *chunk = NULL;
+                struct curl_slist* chunk = NULL;
                 int len = strlen("Authorization: ") + strlen(basicAuth) + 1;
 
-                char *authorizationHeader;
+                char* authorizationHeader;
                 authorizationHeader = malloc(len);
                 snprintf(authorizationHeader, len, "Authorization: %s", basicAuth);
-                log(TPL_DEBUG, "%s", authorizationHeader);
+                asklog(TPL_DEBUG, "%s", authorizationHeader);
 
                 chunk = curl_slist_append(chunk, authorizationHeader);
 
@@ -78,12 +78,12 @@ int httpBasicAuthentication(const char *username, const char *basicAuth)
                 res = curl_easy_perform(curl);
                 /* Check for errors */
                 if (res != CURLE_OK)
-                        log(TPL_ERR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
+                        asklog(TPL_ERR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
 
                 /* and get HTTP response code */
                 long httpCode = 0;
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-                log(TPL_DEBUG, "Zimbra authentication result code: %d", httpCode);
+                asklog(TPL_DEBUG, "Zimbra authentication result code: %d", httpCode);
                 result = httpCode == 200 && res != CURLE_ABORTED_BY_CALLBACK ? AUTHENTICATED : NOT_AUTHENTICATED;
 
                 /* always cleanup */
@@ -91,7 +91,7 @@ int httpBasicAuthentication(const char *username, const char *basicAuth)
         }
 
         curl_global_cleanup();
-        log(TPL_DEBUG, "---------------------------------------------------------------");
+        asklog(TPL_DEBUG, "---------------------------------------------------------------");
 
         return result;
 }

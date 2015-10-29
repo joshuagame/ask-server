@@ -39,19 +39,19 @@
 
 static void startServer();
 
-static struct MHD_Daemon *mhdd;
+static struct MHD_Daemon* mhdd;
 
 static void int_signal_handler(int s)
 {
-        log(TPL_INFO, "Shutting down the server");
+        asklog(TPL_INFO, "Shutting down the server");
         MHD_stop_daemon(mhdd);
-        log(TPL_INFO, "ASK Server is down...");
-        log(TPL_INFO, "Bye!");
+        asklog(TPL_INFO, "ASK Server is down...");
+        asklog(TPL_INFO, "Bye!");
         log_dispose();
         exit(0);
 }
 
-int main(int argc, char *const *argv)
+int main(int argc, char* const* argv)
 {
         signal(SIGINT, int_signal_handler);
 
@@ -59,7 +59,7 @@ int main(int argc, char *const *argv)
 
         log_init(TPLM_FILE, TPL_DEBUG, log_fd);
         configure(argc, argv);
-        log(TPL_INFO, "ASK server configured!");
+        asklog(TPL_INFO, "ASK server configured!");
 
         startServer();
 
@@ -70,7 +70,7 @@ void startServer()
 {
 //    struct MHD_Daemon* mhdd;
         struct timeval tv;
-        struct timeval *tvp;
+        struct timeval* tvp;
         fd_set read_fd_set;
         fd_set write_fd_set;
         fd_set exception_fd_set;
@@ -84,8 +84,8 @@ void startServer()
                                 MHD_OPTION_NOTIFY_COMPLETED, &request_completed_callback, NULL,
                                 MHD_OPTION_END);
 
-        log(TPL_INFO, "ASK server started");
-        log(TPL_INFO, "server is listening on port %d", global_config.port);
+        asklog(TPL_INFO, "ASK server started");
+        asklog(TPL_INFO, "server is listening on port %d", global_config.port);
         if (mhdd == NULL) {
                 perror("Unable to start server: error initializing internal MHD server Daemon\n");
                 exit(-1);

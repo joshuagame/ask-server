@@ -726,7 +726,7 @@ do {                                                                            
 } while(0)
 
 
-/* This is an adaptation of Simon Tatham's O(n log(n)) mergesort */
+/* This is an adaptation of Simon Tatham's O(nasklog(n)) mergesort */
 /* Note that HASH_SORT assumes the hash handle name to be hh.
  * HASH_SRT was added to allow the hash handle name to be passed in. */
 #define HASH_SORT(head,cmpfcn) HASH_SRT(hh,head,cmpfcn)

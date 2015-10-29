@@ -86,8 +86,8 @@
 struct config {
         int port;
         bool ssl;
-        const char *name;
-        char *http_auth_url;
+        const char* name;
+        char* http_auth_url;
         bool http_auth_ssl;
 };
 
@@ -98,7 +98,7 @@ enum CL_CONF {
 };
 
 extern struct config global_config;
-extern const char *config_file_name;
+extern const char* config_file_name;
 extern unsigned int command_line_configured_params;
 
 /** request and session */
@@ -127,9 +127,9 @@ typedef struct session {
 } session_t;
 
 typedef struct request {
-        session_t *session;
-        struct MHD_PostProcessor *post_processor;
-        const char *post_url;
+        session_t* session;
+        struct MHD_PostProcessor* post_processor;
+        const char* post_url;
 } request_t;
 
 typedef struct MHD_Response response_t;
@@ -153,47 +153,47 @@ enum tp_log_mode {
 /** forward (only public) function declarations */
 
 /* configure.c */
-void configure(int argc, char *const *argv);
+void configure(int argc, char* const* argv);
 
 /* session.c */
-char *generate_session_id();
+char* generate_session_id();
 
-session_t *get_session(struct MHD_Connection *connection);
+session_t* get_session(struct MHD_Connection* connection);
 
-void add_session_cookie(session_t *session, response_t *response);
+void add_session_cookie(session_t* session, response_t* response);
 
-void add_expired_cookie(response_t *response);
+void add_expired_cookie(response_t* response);
 
-const char *get_session_cookie(connection_t *connection);
+const char* get_session_cookie(connection_t* connection);
 
-void set_session_username(session_t *session, size_t size, uint64_t offset, const char *data);
+void set_session_username(session_t* session, size_t size, uint64_t offset, const char* data);
 
-void set_session_password(session_t *session, size_t size, uint64_t offset, const char *data);
+void set_session_password(session_t* session, size_t size, uint64_t offset, const char* data);
 
-const char *get_session_username(session_t *session);
+const char* get_session_username(session_t* session);
 
-const char *get_session_password(session_t *session);
+const char* get_session_password(session_t* session);
 
 /* protocol.c */
 
-int request_handler(void *cls, struct MHD_Connection *connection, const char *url, const char *method,
-                    const char *version, const char *upload_data, size_t *upload_data_size, void **ptr);
+int request_handler(void* cls, struct MHD_Connection* connection, const char* url, const char* method,
+                    const char* version, const char* upload_data, size_t* upload_data_size, void** ptr);
 
-void request_completed_callback(void *cls, struct MHD_Connection *connection,
-                                void **conCls, enum MHD_RequestTerminationCode toe);
+void request_completed_callback(void* cls, struct MHD_Connection* connection,
+                                void** con_cls, enum MHD_RequestTerminationCode toe);
 
-const char *get_header_value(connection_t *connection, const char *header_name);
+const char* get_header_value(connection_t* connection, const char* header_name);
 
 /* authentication.c */
-int authenticate(connection_t *connection, session_t *session);
+int authenticate(connection_t* connection, session_t* session);
 
 /* http_auth_client.c */
-int http_basic_authentication(const char *username, const char *basic_auth);
+int http_basic_authentication(const char* username, const char* basic_auth);
 
 /* log.c */
 void log_init(int mode, int level, int fd);
 
-void log(int level, const char *fmt, ...);
+void asklog(int level, const char* fmt, ...);
 
 void log_dispose(void);
 

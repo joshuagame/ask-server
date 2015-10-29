@@ -36,34 +36,34 @@
 
 #include "ask.h"
 
-const char *res_auth_ok = "{ \"status\": \"success\", \"message\": \"user authenticated\" }";
+const char* res_auth_ok = "{ \"status\": \"success\", \"message\": \"user authenticated\" }";
 
 /** routes */
-typedef int (*route_handler_t)(const void *cls, const char *mime, session_t *session, connection_t *connection);
+typedef int (* route_handler_t)(const void* cls, const char* mime, session_t* session, connection_t* connection);
 
 typedef struct route {
-        const char *url;
-        const char *mime;
+        const char* url;
+        const char* mime;
         route_handler_t handler;
-        const void *handler_cls;
+        const void* handler_cls;
         bool checkSession;
 } route_t;
 
-static int post_params_iterator(void *cls, enum MHD_ValueKind kind, const char *key, const char *fileName,
-                                const char *contentType, const char *transferEncoding, const char *data,
+static int post_params_iterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
+                                const char* contentType, const char* transferEncoding, const char* data,
                                 uint64_t off, size_t size);
 
-static int home_handler(const void *cls, const char *mime, session_t *session, connection_t *connection);
+static int home_handler(const void* cls, const char* mime, session_t* session, connection_t* connection);
 
-static int basic_auth_handler(const void *cls, const char *mime, session_t *session, connection_t *connection);
+static int basic_auth_handler(const void* cls, const char* mime, session_t* session, connection_t* connection);
 
-static int form_based_auth_handler(const void *cls, const char *mime, session_t *session, connection_t *connection);
+static int form_based_auth_handler(const void* cls, const char* mime, session_t* session, connection_t* connection);
 
-static int not_found_handler(const void *cls, const char *mime, session_t *session, connection_t *connection);;
+static int not_found_handler(const void* cls, const char* mime, session_t* session, connection_t* connection);;
 
-static int ask_for_authentication(connection_t *connection, const char *realm);
+static int ask_for_authentication(connection_t* connection, const char* realm);
 
-static int send_authentication_response(connection_t *connection, session_t *session, char *body, const char *mime);
+static int send_authentication_response(connection_t* connection, session_t* session, char* body, const char* mime);
 
 /* Ask Server Routes */
 static route_t routes[] = {

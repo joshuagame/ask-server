@@ -37,20 +37,20 @@
 #define DEFAULT_SSL_PORT 5443
 
 struct config global_config = {.port = DEFAULT_PORT, .ssl = false};
-const char *config_file_name = "ask.ini";
+const char* config_file_name = "ask.ini";
 unsigned int command_line_configured_params = NONE;
 
 static void usage();
 
 static int loadConfiguration();
 
-static int loadConfigurationHandler(void *user, const char *section, const char *name, const char *value);
+static int loadConfigurationHandler(void* user, const char* section, const char* name, const char* value);
 
 static void printConfiguration();
 
-void configure(int argc, char *const *argv)
+void configure(int argc, char* const* argv)
 {
-        const char *shortOptions = "hp:sC:";
+        const char* shortOptions = "hp:sC:";
         static const struct option longOptions[] = {
                 {"help",        no_argument,       NULL, 'h'},
                 {"port",        required_argument, NULL, 'p'},
@@ -62,8 +62,8 @@ void configure(int argc, char *const *argv)
 
         global_config.name = argv[0];
 
-        log(TPL_INFO, "ASK server (%s) initialization", global_config.name);
-        log(TPL_INFO, "loading configuration from %s", config_file_name);
+        asklog(TPL_INFO, "ASK server (%s) initialization", global_config.name);
+        asklog(TPL_INFO, "loading configuration from %s", config_file_name);
 //    printf("\n>> ASK server (%s) initialization\n", globalConfig.name);
 //    printf(">> Loading configuration fr    om %s\n", configFileName);
 
@@ -98,11 +98,11 @@ void configure(int argc, char *const *argv)
 
         /* load configuration from file */
         loadConfiguration();
-        log(TPL_INFO, "version: %s", ASK_VERSION);
-        log(TPL_INFO, "listening port: %d", global_config.port);
-        log(TPL_INFO, "SSL: %s", global_config.ssl ? "enabled" : "disabled");
-        log(TPL_INFO, "Http Endpoint: http%s://localhost:%d/ask/auth", global_config.ssl ? "s" : "",
-            global_config.port);
+        asklog(TPL_INFO, "version: %s", ASK_VERSION);
+        asklog(TPL_INFO, "listening port: %d", global_config.port);
+        asklog(TPL_INFO, "SSL: %s", global_config.ssl ? "enabled" : "disabled");
+        asklog(TPL_INFO, "Http Endpoint: http%s://localhost:%d/ask/auth", global_config.ssl ? "s" : "",
+               global_config.port);
         printConfiguration();
 }
 
@@ -124,9 +124,9 @@ static int loadConfiguration()
         }
 }
 
-static int loadConfigurationHandler(void *user, const char *section, const char *name, const char *value)
+static int loadConfigurationHandler(void* user, const char* section, const char* name, const char* value)
 {
-        struct Config *pconfig = (struct Config *) user;
+        struct config* pconfig = (struct config*) user;
 
 #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
         if (MATCH("server", "port")) {

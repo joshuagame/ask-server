@@ -4,20 +4,14 @@
  * http://codereview.stackexchange.com/questions/23110/little-log-engine-in-c
  */
 #include "ask.h"
-#include <stdarg.h>
 #include <syslog.h>
 #include <assert.h>
-#include <time.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <errno.h>
 
 /* function from pio.c I use */
-ssize_t log_write(int fd, const void *buf, size_t len)
+ssize_t log_write(int fd, const void* buf, size_t len)
 {
         ssize_t ret, wlen = 0;
-        const char *ptr;
+        const char* ptr;
 
         ptr = buf;
         while (wlen != len) {
@@ -41,7 +35,7 @@ static int log_fd = -1;
 static int log_level;
 static int log_mode;
 
-static const char *level_txt[] = {
+static const char* level_txt[] = {
         //"DEBUG", "INFO", "ERROR", "EMERG"
         "D", "I", "E", "F"
 };
@@ -73,11 +67,11 @@ void log_init(int mode, int level, int fd)
 #define MAX_MSG_LEN 1024
 #define MAX_POSTFIX_LEN 2
 
-static void vlog(int level, const char *fmt, va_list alist)
+static void vlog(int level, const char* fmt, va_list alist)
 {
         int ret, len;
         time_t t;
-        struct tm *tm;
+        struct tm* tm;
         char msg[MAX_TIME_LEN + MAX_PREFIX_LEN + MAX_MSG_LEN + MAX_POSTFIX_LEN];
 
         assert(log_fd);
@@ -120,7 +114,7 @@ static void vlog(int level, const char *fmt, va_list alist)
         }
 }
 
-void log(int level, const char *fmt, ...)
+void asklog(int level, const char* fmt, ...)
 {
         va_list vl;
 
