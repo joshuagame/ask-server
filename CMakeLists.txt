@@ -3,11 +3,9 @@
 #   / _ \ \___ \| ' /   Authentication Sessions Keeper Server
 #  / ___ \ ___) | . \   -------------------------------------
 # /_/   \_\____/|_|\_\  www.codegazoline.it/ask
-#       v1.0.0_alpha-1
-# ===========================================================================
-#
-# Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
-# Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
+#                 v0.1
+# ===============================================================================
+# Copyright (C) 2015, Luca Stasio - joshuagame@gmail.com //The CodeGazoline Team/
 #
 # CMakeLists.txt
 # main entry point for the ASK Server

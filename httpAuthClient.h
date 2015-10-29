@@ -5,10 +5,8 @@
 **  / ___ \ ___) | . \   -------------------------------------
 ** /_/   \_\____/|_|\_\  www.codegazoline.it/ask
 **                 v0.1
-** ===========================================================================
-**
-** Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
-** Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
+** ===============================================================================
+** Copyright (C) 2015, Luca Stasio - joshuagame@gmail.com //The CodeGazoline Team/
 **
 ** httpAuthClient.h
 ** header for HTTP authentication client (actually authenticate against Zimbra server)
@@ -27,8 +25,6 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with Nome - Programma.If not, see <http://www.gnu.org/licenses/>.
-**
-** ===========================================================================
 */
 
 #ifndef ASK_SERVER_HTTP_AUTH_CLIENT_H

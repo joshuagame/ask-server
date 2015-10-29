@@ -4,10 +4,8 @@
 #  / ___ \ ___) | . \   -------------------------------------
 # /_/   \_\____/|_|\_\  www.codegazoline.it/ask
 #                 v0.1
-# ===========================================================================
-#
-# Copyright (C) 2015, The CodeGazoline Team - gargantua AT codegazoline DOT it
-# Luca {joshuagame} Stasio - joshuagame AT gmail DOT com
+# ===============================================================================
+# Copyright (C) 2015, Luca Stasio - joshuagame@gmail.com //The CodeGazoline Team/
 #
 # This file is part of the ASK Server.
 #
