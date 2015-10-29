@@ -35,7 +35,7 @@
 #include "session.h"
 
 int request_handler(void *cls, connection_t *connection, const char *url, const char *method,
-                    const char *version, const char *uploadData, size_t *uploadDataSize, void **ptr)
+                    const char *version, const char *upload_data, size_t *upload_data_size, void **ptr)
 {
         response_t *response;
         request_t *request;
@@ -86,13 +86,13 @@ int request_handler(void *cls, connection_t *connection, const char *url, const 
                 log(TPL_DEBUG, "POST method\n");
 
                 /* eval request post data */
-                MHD_post_process(request->post_processor, uploadData, *uploadDataSize);
+                MHD_post_process(request->post_processor, upload_data, *upload_data_size);
                 log(TPL_DEBUG, "POST data processed\n");
 
 
-                if (*uploadDataSize != 0) {
+                if (*upload_data_size != 0) {
                         log(TPL_DEBUG, "upload data size = 0\n");
-                        *uploadDataSize = 0;
+                        *upload_data_size = 0;
                         return MHD_YES;
                 }
 
@@ -136,9 +136,9 @@ int request_handler(void *cls, connection_t *connection, const char *url, const 
 }
 
 void request_completed_callback(void *cls, connection_t *connection,
-                                void **conCls, enum MHD_RequestTerminationCode toe)
+                                void **con_cls, enum MHD_RequestTerminationCode toe)
 {
-        request_t *request = *conCls;
+        request_t *request = *con_cls;
 
         if (request != NULL) {
                 return;
