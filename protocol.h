@@ -36,40 +36,42 @@
 
 #include "ask.h"
 
-const char* resAuthOk = "{ \"status\": \"success\", \"message\": \"user authenticated\" }";
+const char *res_auth_ok = "{ \"status\": \"success\", \"message\": \"user authenticated\" }";
 
 /** routes */
-typedef int (*RouteHandler)(const void* cls, const char* mime, Session* session, Connection* connection);
+typedef int (*route_handler_t)(const void *cls, const char *mime, session_t *session, connection_t *connection);
 
-typedef struct Route {
-    const char* url;
-    const char* mime;
-    RouteHandler handler;
-    const void* handlerCls;
-    bool checkSession;
-} Route;
+typedef struct route {
+        const char *url;
+        const char *mime;
+        route_handler_t handler;
+        const void *handler_cls;
+        bool checkSession;
+} route_t;
 
-static int postParamsIterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
-                              const char* contentType, const char* transferEncoding, const char* data,
-                              uint64_t off, size_t size);
-static int homeHandler(const void* cls, const char* mime, Session* session, Connection* connection);
-static int basicAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection);
-static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection);
-static int homeHandler(const void* cls, const char* mime, Session* session, Connection* connection);
-static int notFoundHandler(const void* cls, const char* mime, Session* session, Connection* connection);
-static int basicAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection);
-static int formBasedAuthHandler(const void* cls, const char* mime, Session* session, Connection* connection);
-static int askForAuthentication(Connection* connection, const char* realm);
-static int sendAuthenticationResponse(Connection* connection, Session* session, char* body, const char* mime);
+static int post_params_iterator(void *cls, enum MHD_ValueKind kind, const char *key, const char *fileName,
+                                const char *contentType, const char *transferEncoding, const char *data,
+                                uint64_t off, size_t size);
+
+static int home_handler(const void *cls, const char *mime, session_t *session, connection_t *connection);
+
+static int basic_auth_handler(const void *cls, const char *mime, session_t *session, connection_t *connection);
+
+static int form_based_auth_handler(const void *cls, const char *mime, session_t *session, connection_t *connection);
+
+static int not_found_handler(const void *cls, const char *mime, session_t *session, connection_t *connection);;
+
+static int ask_for_authentication(connection_t *connection, const char *realm);
+
+static int send_authentication_response(connection_t *connection, session_t *session, char *body, const char *mime);
 
 /* Ask Server Routes */
-static Route routes[] = {
-        {"/", "text/html", &homeHandler, HOME_PAGE, false},
-        {"/ask", "text/html", &homeHandler, API_HOME_PAGE, false},
-        {"/ask/auth", "application/json; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
-        {"/ask/auth", "text/plain; charset=utf-8", &basicAuthHandler, API_HOME_PAGE, true},
-        {"/ask/login", NULL, &homeHandler, API_HOME_PAGE, false},
-        {NULL, NULL, &notFoundHandler, NULL}
+static route_t routes[] = {
+        {"/",         "text/html",                       &home_handler,       HOME_PAGE,     false},
+        {"/ask",      "text/html",                       &home_handler,       API_HOME_PAGE, false},
+        {"/ask/auth", "application/json; charset=utf-8", &basic_auth_handler, API_HOME_PAGE, true},
+        {"/ask/login", NULL,                             &home_handler,       API_HOME_PAGE, false},
+        {NULL,         NULL,                             &not_found_handler,  NULL}
 };
 
 #endif //ASK_SERVER_PROTOCOL_H

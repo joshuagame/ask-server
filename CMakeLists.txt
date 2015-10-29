@@ -51,7 +51,7 @@ SET(CMAKE_C_FLAGS "-v -std=c99")
 
 
 # source code
-set(SOURCE_FILES askd.c config.c session.c protocol.c authentication.c httpAuthClient.c base64.c log.c version.h ini.h ini.c ask.h protocol.h session.h httpAuthClient.h base64.h)
+set(SOURCE_FILES askd.c config.c session.c protocol.c authentication.c httpAuthClient.c base64.c log.c version.h ini.h ini.c ask.h protocol.h session.h httpAuthClient.h base64.h uthash.h)
 
 # include directories
 include(FindMicroHttpd)

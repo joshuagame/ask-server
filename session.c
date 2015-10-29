@@ -34,130 +34,130 @@
 #include "session.h"
 #include <uuid/uuid.h>
 
-Session* sessions = NULL;
+session_t *sessions = NULL;
 
-char* generateSessionUUID()
+char *generate_session_id()
 {
-    uuid_t uuid;
-    char uuidString[37];
+        uuid_t uuid;
+        char session_id[37];
 
-    uuid_generate_time(uuid);
-    uuid_unparse_lower(uuid, &uuidString);
-    uuidString[37] = '\0';
-    log(TPL_DEBUG, "generated Session UUID: %s, len: %d", uuidString, strlen(uuidString));
+        uuid_generate_time(uuid);
+        uuid_unparse_lower(uuid, &session_id);
+        session_id[37] = '\0';
+        log(TPL_DEBUG, "generated session id: %s, len: %d", session_id, strlen(session_id));
 
-    return uuidString;
+        return session_id;
 }
 
-Session* getSession(struct MHD_Connection* connection)
+session_t *get_session(struct MHD_Connection *connection)
 {
-    Session* session;
-    const char* cookie;
+        session_t *session;
+        const char *cookie;
 
-    /*
-     * Checking for session id from session cookie:
-     *   - if here we have a session cookie, grab the session id and check for it in the active sessions list
-     *   -    if we cannot find session id in the list than here we have an expired session => askForAuth
-     *   -    if we found the session id in the list we have an authenticated session
-     *   - if we have NO session cookie here than generate a new session id
-     */
-    if (cookie = getSessionCookie(connection)) {
-        log(TPL_DEBUG, "checking sessions for ASKSESSION %s", cookie);
-        session = sessions;
-        while (session != NULL) {
-            if (strcmp(cookie, session->id) == 0) break;
-            session = session->next;
-        }
-        if (session != NULL) {
-            if (session->state == ACTIVE) {
-                log(TPL_INFO, "an active session exists for ASKSESSION %s", cookie);
-                session->rc++;
+        /*
+         * Checking for session id from session cookie:
+         *   - if here we have a session cookie, grab the session id and check for it in the active sessions list
+         *   -    if we cannot find session id in the list than here we have an expired session => askForAuth
+         *   -    if we found the session id in the list we have an authenticated session
+         *   - if we have NO session cookie here than generate a new session id
+         */
+        if (cookie = get_session_cookie(connection)) {
+                log(TPL_DEBUG, "checking sessions for ASKSESSION %s", cookie);
+                HASH_FIND_STR(sessions, cookie, session);
+                if (session != NULL) {
+                        if (session->state == ACTIVE) {
+                                log(TPL_INFO, "an active session exists for ASKSESSION %s", cookie);
+                                session->rc++;
+                                return session;
+                        }
+                }
+
+                // returning a NULL session the caller will have to ask for a new authentication from the client
+                log(TPL_ERR, "no ACTIVE session for cookie %s", cookie);
+                session = calloc(1, sizeof(session_t));
+                session->state = EXPIRED;
                 return session;
-            }
+
         }
 
-        // returning a NULL session the caller will have to ask for a new authentication from the client
-        log(TPL_ERR, "no ACTIVE session for cookie %s", cookie);
-        session = calloc(1, sizeof(Session));
-        session->state = EXPIRED;
+        /* create a new session */
+        session = calloc(1, sizeof(session_t));
+        session->state = STARTED;
+        time_t now;
+        time(&now);
+        session->expiration = now + 3600;
+
+        if (session == NULL) {
+                perror("unable to alloc session structure for the request\n");
+                return NULL;
+        }
+
         return session;
-
-    }
-
-    /* create a new session */
-    session = calloc(1, sizeof(Session));
-    session->state = STARTED;
-    if (session == NULL) {
-        perror("unable to alloc session structure for the request\n");
-        return NULL;
-    }
-
-    return session;
 }
 
 /* TODO: set expires attribute starting from session->expire time */
-void addSessionCookie(Session* session, Response* response)
+void add_session_cookie(session_t *session, response_t *response)
 {
-    time_t rawtime;
-    struct tm expirationTime;
-    char expirationTimeBuffer[80];
+        time_t rawtime = session->expiration;
+        struct tm expiration_time;
+        char expiration_time_buffer[80];
 
-    time(&rawtime);
-    expirationTime = *localtime(&rawtime);
-    expirationTime.tm_sec += 3600;
-    mktime(&expirationTime);
-    strftime(expirationTimeBuffer, 80, "%a, %d-%b-%Y %X GMT", &expirationTime);
+        expiration_time = *localtime(&rawtime);
+        expiration_time.tm_sec += 3600;
+        mktime(&expiration_time);
+        strftime(expiration_time_buffer, 80, "%a, %d-%b-%Y %X GMT", &expiration_time);
 
-    char buffer[256];
-    snprintf(buffer, sizeof(buffer), "%s=%s;expires=%s;path=/", ASK_COOKIE_NAME, session->id, expirationTimeBuffer);
-    if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
-        perror("Unable to set session cookie header.\n");
-    }
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer), "%s=%s;expires=%s;path=/", ASK_COOKIE_NAME, session->id,
+                 expiration_time_buffer);
+        if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
+                perror("Unable to set session cookie header.\n");
+        }
 }
 
-void addExpiredCookie(Response* response)
+void add_expired_cookie(response_t *response)
 {
-    char buffer[256];
-    snprintf(buffer, sizeof(buffer), "%s=deleted;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT", ASK_COOKIE_NAME);
-    if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
-        perror("Unable to set session cookie header.\n");
-    }
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer), "%s=deleted;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT", ASK_COOKIE_NAME);
+        if (MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, buffer) == MHD_NO) {
+                perror("Unable to set session cookie header.\n");
+        }
 }
 
-const char* getSessionCookie(Connection* connection)
+const char *get_session_cookie(connection_t *connection)
 {
-    return MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME);
+        return MHD_lookup_connection_value(connection, MHD_COOKIE_KIND, ASK_COOKIE_NAME);
 }
 
 /* TODO: try and unify the following into one function */
-void setSessionUsername(Session* session, size_t size, uint64_t offset, const char* data)
+void set_session_username(session_t *session, size_t size, uint64_t offset, const char *data)
 {
-    if (size + offset > sizeof(session->fcred.username)) {
-        size = sizeof(session->fcred.username) - offset;
-    }
-    memcpy(&session->fcred.username[offset], data, size);
-    if (size + offset < sizeof(session->fcred.username)) {
-        session->fcred.username[size + offset] = '\0';
-    }
+        if (size + offset > sizeof(session->fcred.username)) {
+                size = sizeof(session->fcred.username) - offset;
+        }
+        memcpy(&session->fcred.username[offset], data, size);
+        if (size + offset < sizeof(session->fcred.username)) {
+                session->fcred.username[size + offset] = '\0';
+        }
 }
 
-void setSessionPassword(Session* session, size_t size, uint64_t offset, const char* data)
+void set_session_password(session_t *session, size_t size, uint64_t offset, const char *data)
 {
-    if (size + offset > sizeof(session->fcred.password)) {
-        size = sizeof(session->fcred.password) - offset;
-    }
-    memcpy(&session->fcred.password[offset], data, size);
-    if (size + offset < sizeof(session->fcred.password)) {
-        session->fcred.password[size + offset] = '\0';
-    }
+        if (size + offset > sizeof(session->fcred.password)) {
+                size = sizeof(session->fcred.password) - offset;
+        }
+        memcpy(&session->fcred.password[offset], data, size);
+        if (size + offset < sizeof(session->fcred.password)) {
+                session->fcred.password[size + offset] = '\0';
+        }
 }
 
-const char* getSessionUsername(Session* session)
+const char *get_session_username(session_t *session)
 {
-    return session->fcred.username;
+        return session->fcred.username;
 }
 
-const char* getSessionPassword(Session* session)
+const char *get_session_password(session_t *session)
 {
-    return session->fcred.password;
+        return session->fcred.password;
 }

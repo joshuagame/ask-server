@@ -38,6 +38,6 @@
 #include <openssl/md5.h>
 
 /** sessions linked list. TODO: use an HashMap! */
-extern Session* sessions;
+extern session_t* sessions;
 
 #endif

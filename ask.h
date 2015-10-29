@@ -38,7 +38,7 @@
 
 #include "version.h"
 #include "ini.h"
-
+#include "uthash.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,9 +52,12 @@
 #include <sys/socket.h>
 #include <inttypes.h>
 #include <microhttpd.h>
+
 #ifndef __APPLE__
 #ifdef __CYGWIN__
+
 #include <sys/errno.h>
+
 #else
 #include <bits/errno.h>
 #endif
@@ -80,68 +83,71 @@
 
 /** configuration */
 
-struct Config {
-    int port;
-    bool ssl;
-    const char* name;
-    char* http_auth_url;
-    bool http_auth_ssl;
+struct config {
+        int port;
+        bool ssl;
+        const char *name;
+        char *http_auth_url;
+        bool http_auth_ssl;
 };
 
 enum CL_CONF {
-    NONE = 0,
-    PORT = 1,
-    _SSL = 2
+        NONE = 0,
+        PORT = 1,
+        _SSL = 2
 };
 
-extern struct Config globalConfig;
-extern const char* configFileName;
-extern unsigned int commandLineConfiguredParams;
+extern struct config global_config;
+extern const char *config_file_name;
+extern unsigned int command_line_configured_params;
 
 /** request and session */
 
-#define J_USERNAME "j_username"
-#define J_PASSWORD "j_password"
+#define ASK_UNAME "ask_username"
+#define ASK_PWD "ask_password"
 
-struct FormCredentials {
-    char username[256];
-    char password[64];
-};
+typedef struct form_credentials {
+        char username[256];
+        char password[64];
+} form_credentials_t;
 
-typedef enum { STARTED, ACTIVE, EXPIRED } State;
+typedef enum session_state {
+        STARTED, ACTIVE, EXPIRED
+} session_state_t;
 
-typedef struct Session {
-    struct Session* next;
-    char id[37];
-    unsigned int rc;
-    time_t start;
-    struct FormCredentials fcred;
-    unsigned int seq;
-    State state;
-} Session;
+typedef struct session {
+//    struct Session* next;
+        char id[37];
+        unsigned int rc;
+        time_t start;
+        time_t expiration;
+        form_credentials_t fcred;
+        session_state_t state;
+        UT_hash_handle hh;
+} session_t;
 
-typedef struct {
-    Session* session;
-    struct MHD_PostProcessor* postProcessor;
-    const char* postUrl;
-} Request;
+typedef struct request {
+        session_t *session;
+        struct MHD_PostProcessor *post_processor;
+        const char *post_url;
+} request_t;
 
-typedef struct MHD_Response Response;
-typedef struct MHD_Connection Connection;
+typedef struct MHD_Response response_t;
+typedef struct MHD_Connection connection_t;
 
 /** simple log engine structures */
 #define TPL_IDENT "ask"
 
 enum tp_log_level {
-    TPL_DEBUG,
-    TPL_INFO,
-    TPL_ERR,
-    TPL_EMERG,
+        TPL_DEBUG,
+        TPL_INFO,
+        TPL_ERR,
+        TPL_EMERG,
 };
 
 enum tp_log_mode {
-    TPLM_SYSLOG,
-    TPLM_FILE,
+        TPLM_SYSLOG,
+        TPLM_FILE,
 };
 
 /** forward (only public) function declarations */
@@ -150,33 +156,45 @@ enum tp_log_mode {
 void configure(int argc, char *const *argv);
 
 /* session.c */
-char* generateSessionUUID();
-Session* getSession(struct MHD_Connection* connection);
-void addSessionCookie(Session* session, Response* response);
-void addExpiredCookie(Response* response);
-const char* getSessionCookie(Connection* connection);
-void setSessionUsername(Session* session, size_t size, uint64_t offset, const char* data);
-void setSessionPassword(Session* session, size_t size, uint64_t offset, const char* data);
-const char* getSessionUsername(Session* session);
-const char* getSessionPassword(Session* session);
+char *generate_session_id();
+
+session_t *get_session(struct MHD_Connection *connection);
+
+void add_session_cookie(session_t *session, response_t *response);
+
+void add_expired_cookie(response_t *response);
+
+const char *get_session_cookie(connection_t *connection);
+
+void set_session_username(session_t *session, size_t size, uint64_t offset, const char *data);
+
+void set_session_password(session_t *session, size_t size, uint64_t offset, const char *data);
+
+const char *get_session_username(session_t *session);
+
+const char *get_session_password(session_t *session);
 
 /* protocol.c */
 
-int requestHandler(void* cls, struct MHD_Connection* connection, const char* url, const char* method,
-                          const char* version, const char* uploadData, size_t* uploadDataSize, void** ptr);
-void requestCompletedCallback(void* cls, struct MHD_Connection* connection,
-                                     void** conCls, enum MHD_RequestTerminationCode toe);
-const char* getHeaderValue(Connection* connection, const char* headerName);
+int request_handler(void *cls, struct MHD_Connection *connection, const char *url, const char *method,
+                    const char *version, const char *upload_data, size_t *upload_data_size, void **ptr);
+
+void request_completed_callback(void *cls, struct MHD_Connection *connection,
+                                void **conCls, enum MHD_RequestTerminationCode toe);
+
+const char *get_header_value(connection_t *connection, const char *header_name);
 
 /* authentication.c */
-int authenticate(Connection* connection, Session* session);
+int authenticate(connection_t *connection, session_t *session);
 
 /* http_auth_client.c */
-int httpBasicAuthentication(const char* username, const char* basicAuth);
+int http_basic_authentication(const char *username, const char *basic_auth);
 
 /* log.c */
-void logInit(int mode, int level, int fd);
+void log_init(int mode, int level, int fd);
+
 void log(int level, const char *fmt, ...);
-void logDispose(void);
+
+void log_dispose(void);
 
 #endif //ASK_SERVER_ASK_H

@@ -36,6 +36,6 @@
 
 #include "ask.h"
 
-static char* authUrl(const char* username);
+static char* auth_url(const char* username);
 
 #endif

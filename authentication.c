@@ -34,79 +34,79 @@
 #include "ask.h"
 #include "base64.h"
 
-static unsigned int extractUsername(const char* basicAuth, char** username)
+static unsigned int extract_username(const char *basic_auth, char **username)
 {
-    unsigned int len = strlen(basicAuth);
-    unsigned int i = 0;
-    for (i = 0; i < len; i++) {
-        if (basicAuth[i] == ':') {
-            break;
+        unsigned int len = strlen(basic_auth);
+        unsigned int i = 0;
+        for (i = 0; i < len; i++) {
+                if (basic_auth[i] == ':') {
+                        break;
+                }
         }
-    }
 
-    if (i < len) {
-        *username = (char*)malloc(i);
-        (*username)[i] = '\0';
-        strncpy(*username, basicAuth, i);
-    }
+        if (i < len) {
+                *username = (char *) malloc(i);
+                (*username)[i] = '\0';
+                strncpy(*username, basic_auth, i);
+        }
 
-    return i;
+        return i;
 }
 
-static unsigned int extractAuthenticationData(const char* authenticationHeaderValue, char** authenticationData)
+static unsigned int extract_authentication_data(const char *authentication_header_value, char **authentication_data)
 {
-    unsigned int i = 0;
-    char *line = strdup(authenticationHeaderValue);
-    char *basic = strtok(line, " ");
-    char *data = strtok(NULL, " ");
-    *authenticationData = data;
-    return i;
+        unsigned int i = 0;
+        char *line = strdup(authentication_header_value);
+        char *basic = strtok(line, " ");
+        char *data = strtok(NULL, " ");
+        *authentication_data = data;
+        return i;
 }
 
-static int basicAuthentication(Connection* connection)
+static int basic_authentication(connection_t *connection)
 {
-    const char* authorizationHeaderValue;
-    const char* basicPrefix = "Basic ";
-    int authenticated;
+        const char *authentication_header_value;
+        const char *basic_prefix = "Basic ";
+        int authenticated;
 
-    authorizationHeaderValue = getHeaderValue(connection, MHD_HTTP_HEADER_AUTHORIZATION);
-    log(TPL_DEBUG,"Authorization header: %s", authorizationHeaderValue);
+        authentication_header_value = get_header_value(connection, MHD_HTTP_HEADER_AUTHORIZATION);
+        log(TPL_DEBUG, "Authorization header: %s", authentication_header_value);
 
-    /* no Basic info at all */
-    if (authorizationHeaderValue == NULL) {
-        return NO_BASIC_AUTH_INFO;
-    }
+        /* no Basic info at all */
+        if (authentication_header_value == NULL) {
+                return NO_BASIC_AUTH_INFO;
+        }
 
-    /* malformed "Authorization" header value */
-    if (strncmp(authorizationHeaderValue, basicPrefix, strlen(basicPrefix)) != 0) {
-        return 0;
-    }
+        /* malformed "Authorization" header value */
+        if (strncmp(authentication_header_value, basic_prefix, strlen(basic_prefix)) != 0) {
+                return 0;
+        }
 
-    /* extract the authentication data from Authorization header */
-    char* authenticationData;
-    extractAuthenticationData(authorizationHeaderValue, &authenticationData);
+        /* extract the authentication data from Authorization header */
+        char *authenticationData;
+        extract_authentication_data(authentication_header_value, &authenticationData);
 
-    /* decode the authentication data */
-    char* base64DecodeOutput;
-    size_t decodedSize = 0;
-    Base64Decode(authenticationData, &base64DecodeOutput, &decodedSize);
+        /* decode the authentication data */
+        char *base64_decoded_output;
+        size_t decodedSize = 0;
+        Base64Decode(authenticationData, &base64_decoded_output, &decodedSize);
 
-    /* extract the username */
-    char* username;
-    size_t ulen = extractUsername(base64DecodeOutput, &username);
-    log(TPL_DEBUG, "username: %s", username);
+        /* extract the username */
+        char *username;
+        size_t ulen = extract_username(base64_decoded_output, &username);
+        log(TPL_DEBUG, "username: %s", username);
 
-    if (username == NULL) {
-        return 0;
-    }
+        if (username == NULL) {
+                return 0;
+        }
 
-    /* perform Zimbra authentication */
-    authenticated =  httpBasicAuthentication(username, authorizationHeaderValue);
-    return authenticated;
+        /* perform Zimbra authentication */
+        authenticated = http_basic_authentication(username, authentication_header_value);
+        return authenticated;
 }
 
 /* TODO: implement this!!! */
-static int formBasedAuthentication(Connection* connection, Session* session)
+static int form_based_authentication(connection_t *connection, session_t *session)
 {
 //    const char* username = getSessionUsername(session);
 //    const char* password = getSessionPassword(session);
@@ -119,22 +119,22 @@ static int formBasedAuthentication(Connection* connection, Session* session)
 ////        return AUTHENTICATED;
 ////    }
 
-    return NOT_AUTHENTICATED;
+        return NOT_AUTHENTICATED;
 }
 
-int authenticate(Connection* connection, Session* session)
+int authenticate(connection_t *connection, session_t *session)
 {
-    /*
-     * no cookie has been found or the session has expired, so check for authentication credentials:
-     * here we first try for Basic Authentication and if there are no Basic Auth info, then we check for
-     * FORM-Based username and password (here we have username and password in session because of the post iterator)
-     */
-    log(TPL_INFO, "Authenticating");
-    int auth = basicAuthentication(connection);
-    if (auth == NO_BASIC_AUTH_INFO) {
-        auth = formBasedAuthentication(connection, session);
-    }
+        /*
+         * no cookie has been found or the session has expired, so check for authentication credentials:
+         * here we first try for Basic Authentication and if there are no Basic Auth info, then we check for
+         * FORM-Based username and password (here we have username and password in session because of the post iterator)
+         */
+        log(TPL_INFO, "Authenticating");
+        int auth = basic_authentication(connection);
+        if (auth == NO_BASIC_AUTH_INFO) {
+                auth = form_based_authentication(connection, session);
+        }
 
-    return auth;
+        return auth;
 }
 
