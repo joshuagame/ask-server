@@ -6,6 +6,7 @@
 #include "ask.h"
 #include <syslog.h>
 #include <assert.h>
+#include <fcntl.h>
 
 /* function from pio.c I use */
 ssize_t log_write(int fd, const void* buf, size_t len)
@@ -44,7 +45,10 @@ static const int level_syslog[] = {
         LOG_DEBUG, LOG_INFO, LOG_ERR, LOG_EMERG
 };
 
-void log_init(int mode, int level, int fd)
+/*
+ * initialize log starting from the file descriptor
+ */
+void asklog_init(int mode, int level, int fd)
 {
     assert(mode == TPLM_SYSLOG || mode == TPLM_FILE);
     assert(mode == TPLM_FILE ? fd >= 0 : 1);
@@ -60,6 +64,15 @@ void log_init(int mode, int level, int fd)
     }
     log_level = level;
     log_mode = mode;
+}
+
+/*
+ * initialize log starting from the file name
+ */
+void asklog_init_fn(int mode, int level, const char * fn)
+{
+    int fd = open(fn, O_RDWR | O_APPEND | O_CREAT, S_IWRITE | S_IREAD);
+    asklog_init(mode, level, fd);
 }
 
 #define MAX_TIME_LEN 512
@@ -123,7 +136,7 @@ void asklog(int level, const char* fmt, ...)
     va_end(vl);
 }
 
-void log_dispose(void)
+void asklog_dispose(void)
 {
     assert(log_fd);
 

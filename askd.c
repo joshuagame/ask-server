@@ -31,7 +31,6 @@
 #define _GNU_SOURCE         /*!< this is for asprintf() */
 
 #include "ask.h"
-#include <fcntl.h>
 
 static void startServer();
 
@@ -43,7 +42,7 @@ static void int_signal_handler(int s)
     MHD_stop_daemon(mhdd);
     asklog(TPL_INFO, "ASK Server is down...");
     asklog(TPL_INFO, "Bye!");
-    log_dispose();
+    asklog_dispose();
     exit(0);
 }
 
@@ -51,9 +50,7 @@ int main(int argc, char* const* argv)
 {
     signal(SIGINT, int_signal_handler);
 
-    int log_fd = open("server.log", O_RDWR | O_APPEND | O_CREAT, S_IWRITE | S_IREAD);
-
-    log_init(TPLM_FILE, TPL_DEBUG, log_fd);
+    asklog_init(TPLM_FILE, TPL_DEBUG, "server.log");
     configure(argc, argv);
     asklog(TPL_INFO, "ASK server configured!");
 

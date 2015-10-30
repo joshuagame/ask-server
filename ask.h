@@ -187,10 +187,10 @@ int authenticate(connection_t* connection, session_t* session);
 int http_basic_authentication(const char* username, const char* basic_auth);
 
 /* log.c */
-void log_init(int mode, int level, int fd);
+void asklog_init(int mode, int level, int fd);
 
 void asklog(int level, const char* fmt, ...);
 
-void log_dispose(void);
+void asklog_dispose(void);
 
 #endif //ASK_SERVER_ASK_H
