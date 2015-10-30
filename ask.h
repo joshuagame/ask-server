@@ -153,31 +153,21 @@ void configure(int argc, char* const* argv);
 
 /* session.c */
 char* generate_session_id();
-
 session_t* get_session(struct MHD_Connection* connection);
-
 void add_session_cookie(session_t* session, response_t* response);
-
 void add_expired_cookie(response_t* response);
-
 const char* get_session_cookie(connection_t* connection);
-
 void set_session_username(session_t* session, size_t size, uint64_t offset, const char* data);
-
 void set_session_password(session_t* session, size_t size, uint64_t offset, const char* data);
-
 const char* get_session_username(session_t* session);
-
 const char* get_session_password(session_t* session);
 
 /* protocol.c */
 
 int request_handler(void* cls, struct MHD_Connection* connection, const char* url, const char* method,
                     const char* version, const char* upload_data, size_t* upload_data_size, void** ptr);
-
 void request_completed_callback(void* cls, struct MHD_Connection* connection,
                                 void** con_cls, enum MHD_RequestTerminationCode toe);
-
 const char* get_header_value(connection_t* connection, const char* header_name);
 
 /* authentication.c */
@@ -188,9 +178,8 @@ int http_basic_authentication(const char* username, const char* basic_auth);
 
 /* log.c */
 void asklog_init(int mode, int level, int fd);
-
+void asklog_init_fn(int mode, int level, const char * fn);
 void asklog(int level, const char* fmt, ...);
-
 void asklog_dispose(void);
 
 #endif //ASK_SERVER_ASK_H

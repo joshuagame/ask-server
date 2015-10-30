@@ -50,7 +50,7 @@ int main(int argc, char* const* argv)
 {
     signal(SIGINT, int_signal_handler);
 
-    asklog_init(TPLM_FILE, TPL_DEBUG, "server.log");
+    asklog_init_fn(TPLM_FILE, TPL_DEBUG, "server.log");
     configure(argc, argv);
     asklog(TPL_INFO, "ASK server configured!");
 
