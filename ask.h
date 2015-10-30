@@ -80,17 +80,17 @@
 /** configuration */
 
 struct config {
-        int port;
-        bool ssl;
-        const char* name;
-        char* http_auth_url;
-        bool http_auth_ssl;
+    int port;
+    bool ssl;
+    const char* name;
+    char* http_auth_url;
+    bool http_auth_ssl;
 };
 
 enum CL_CONF {
-        NONE = 0,
-        PORT = 1,
-        _SSL = 2
+    NONE = 0,
+    PORT = 1,
+    _SSL = 2
 };
 
 extern struct config global_config;
@@ -103,29 +103,29 @@ extern unsigned int command_line_configured_params;
 #define ASK_PWD "ask_password"
 
 typedef struct form_credentials {
-        char username[256];
-        char password[64];
+    char username[256];
+    char password[64];
 } form_credentials_t;
 
 typedef enum session_state {
-        STARTED, ACTIVE, EXPIRED
+    STARTED, ACTIVE, EXPIRED
 } session_state_t;
 
 typedef struct session {
 //    struct Session* next;
-        char id[37];
-        unsigned int rc;
-        time_t start;
-        time_t expiration;
-        form_credentials_t fcred;
-        session_state_t state;
-        UT_hash_handle hh;
+    char id[37];
+    unsigned int rc;
+    time_t start;
+    time_t expiration;
+    form_credentials_t fcred;
+    session_state_t state;
+    UT_hash_handle hh;
 } session_t;
 
 typedef struct request {
-        session_t* session;
-        struct MHD_PostProcessor* post_processor;
-        const char* post_url;
+    session_t* session;
+    struct MHD_PostProcessor* post_processor;
+    const char* post_url;
 } request_t;
 
 typedef struct MHD_Response response_t;
@@ -135,15 +135,15 @@ typedef struct MHD_Connection connection_t;
 #define TPL_IDENT "ask"
 
 enum tp_log_level {
-        TPL_DEBUG,
-        TPL_INFO,
-        TPL_ERR,
-        TPL_EMERG,
+    TPL_DEBUG,
+    TPL_INFO,
+    TPL_ERR,
+    TPL_EMERG,
 };
 
 enum tp_log_mode {
-        TPLM_SYSLOG,
-        TPLM_FILE,
+    TPLM_SYSLOG,
+    TPLM_FILE,
 };
 
 /** forward (only public) function declarations */

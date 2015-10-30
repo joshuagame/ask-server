@@ -38,11 +38,11 @@ const char* res_auth_ok = "{ \"status\": \"success\", \"message\": \"user authen
 typedef int (* route_handler_t)(const void* cls, const char* mime, session_t* session, connection_t* connection);
 
 typedef struct route {
-        const char* url;
-        const char* mime;
-        route_handler_t handler;
-        const void* handler_cls;
-        bool checkSession;
+    const char* url;
+    const char* mime;
+    route_handler_t handler;
+    const void* handler_cls;
+    bool checkSession;
 } route_t;
 
 static int post_params_iterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* fileName,
