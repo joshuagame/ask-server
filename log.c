@@ -7,6 +7,7 @@
 #include <syslog.h>
 #include <assert.h>
 #include <fcntl.h>
+#include <errno.h>
 
 /* function from pio.c I use */
 ssize_t log_write(int fd, const void* buf, size_t len)
@@ -18,10 +19,12 @@ ssize_t log_write(int fd, const void* buf, size_t len)
     while (wlen != len) {
         ret = write(fd, ptr, len - wlen);
 
-        if (ret == -1) if (errno == EINTR)
-            continue;
-        else
+        if (ret == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
             return -1;
+        }
 
         wlen += ret;
         ptr += ret;
